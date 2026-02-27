@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Umbrella, MapPin, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Umbrella, MapPin, ShieldCheck, ArrowRight, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Home() {
@@ -17,11 +17,19 @@ export default function Home() {
             </div>
             <span className="font-bold text-xl text-slate-800 tracking-tight">Umbrellab</span>
           </div>
-          <Link href="/admin/login">
-            <Button variant="ghost" className="text-slate-600 font-medium">
-              관리자 로그인
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/return">
+              <Button variant="ghost" className="text-slate-600 font-medium flex items-center gap-1.5">
+                <RotateCcw className="w-4 h-4" />
+                반납하기
+              </Button>
+            </Link>
+            <Link href="/admin/login">
+              <Button variant="ghost" className="text-slate-600 font-medium">
+                관리자 로그인
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
