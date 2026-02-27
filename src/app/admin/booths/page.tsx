@@ -47,7 +47,7 @@ export default function BoothsPage() {
             const data = await res.json();
             setBooths(data.booths || []);
         } catch {
-            toast.error('행상 목록을 불러오지 못했습니다.');
+            toast.error('행사 목록을 불러오지 못했습니다.');
         } finally {
             setLoading(false);
         }
@@ -107,9 +107,9 @@ export default function BoothsPage() {
                 }),
             });
 
-            if (!res.ok) throw new Error('행상 생성 실패');
+            if (!res.ok) throw new Error('행사 생성 실패');
 
-            toast.success('새 행상이 등록되었습니다.');
+            toast.success('새 행사가 등록되었습니다.');
             setName('');
             setPhoto('');
             setUmbrellaStartNumber('');
@@ -136,7 +136,7 @@ export default function BoothsPage() {
     };
 
     const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`'${name}' 행상을 정말 삭제하시겠습니까?\n(관련된 모든 정보가 삭제될 수 있습니다)`)) return;
+        if (!confirm(`'${name}' 행사를 정말 삭제하시겠습니까?\n(관련된 모든 정보가 삭제될 수 있습니다)`)) return;
 
         try {
             const res = await fetch(`/api/booths/${id}`, {
@@ -145,7 +145,7 @@ export default function BoothsPage() {
 
             if (!res.ok) throw new Error('삭제 실패');
 
-            toast.success('행상이 삭제되었습니다.');
+            toast.success('행사가 삭제되었습니다.');
             fetchBooths();
         } catch (err: any) {
             toast.error(err.message || '삭제 중 오류가 발생했습니다.');
@@ -209,20 +209,20 @@ export default function BoothsPage() {
     return (
         <div className="space-y-8">
             <div>
-                <h2 className="text-2xl font-bold tracking-tight">행상 관리</h2>
-                <p className="text-gray-500">행상을 등록하고 QR 코드를 발급받으세요.</p>
+                <h2 className="text-2xl font-bold tracking-tight">행사 관리</h2>
+                <p className="text-gray-500">행사를 등록하고 QR 코드를 발급받으세요.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Create Form */}
                 <Card className="md:col-span-1 h-fit">
                     <CardHeader>
-                        <CardTitle>새 행상 추가</CardTitle>
+                        <CardTitle>새 행사 추가</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleCreate} className="space-y-4">
                             <div className="space-y-2">
-                                <Label>행상 이름</Label>
+                                <Label>행사 이름</Label>
                                 <Input
                                     placeholder="예: 강남역 부스"
                                     value={name}
@@ -267,7 +267,7 @@ export default function BoothsPage() {
                                 )}
                             </div>
                             <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? '등록 중...' : '행상 추가'}
+                                {isSubmitting ? '등록 중...' : '행사 추가'}
                             </Button>
                         </form>
                     </CardContent>
@@ -386,7 +386,7 @@ export default function BoothsPage() {
                         ))}
                         {loading && <p className="text-gray-500">불러오는 중...</p>}
                         {!loading && booths.length === 0 && (
-                            <p className="text-gray-500 col-span-2 text-center py-8">등록된 행상이 없습니다.</p>
+                            <p className="text-gray-500 col-span-2 text-center py-8">등록된 행사가 없습니다.</p>
                         )}
                     </div>
 

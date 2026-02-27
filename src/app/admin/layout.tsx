@@ -67,7 +67,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/admin/booths' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
                     >
                         <Store className="w-5 h-5" />
-                        행상 관리
+                        행사 관리
                     </Link>
                 </nav>
                 <div className="p-4 border-t border-gray-200">

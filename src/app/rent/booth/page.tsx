@@ -13,7 +13,7 @@ export default async function RentPage({ searchParams }: PageProps) {
             <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
                 <div className="text-center space-y-4">
                     <h1 className="text-2xl font-bold text-red-600">안내</h1>
-                    <p className="text-gray-600">비정상적인 접근입니다. (행상 정보 없음)</p>
+                    <p className="text-gray-600">비정상적인 접근입니다. (행사 정보 없음)</p>
                 </div>
             </div>
         );
@@ -30,7 +30,7 @@ export default async function RentPage({ searchParams }: PageProps) {
             <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
                 <div className="text-center space-y-4">
                     <h1 className="text-2xl font-bold text-red-600">안내</h1>
-                    <p className="text-gray-600">운영 중이 아닌 행상입니다.</p>
+                    <p className="text-gray-600">운영 중이 아닌 행사입니다.</p>
                 </div>
             </div>
         );

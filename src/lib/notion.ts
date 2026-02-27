@@ -36,7 +36,7 @@ export async function addRentalRecordToNotion(data: {
                         },
                     ],
                 },
-                '대여 행상': {
+                '대여 행사': {
                     rich_text: [
                         {
                             text: {

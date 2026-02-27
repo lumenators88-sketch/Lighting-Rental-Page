@@ -110,7 +110,7 @@ export default function AdminDashboard() {
                 ))}
                 {boothSummaries.length === 0 && !loading && (
                     <div className="col-span-full p-4 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed">
-                        등록된 행상(부스)이 없습니다.
+                        등록된 행사(부스)가 없습니다.
                     </div>
                 )}
             </div>
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
                                 <TableHead>상태</TableHead>
                                 <TableHead>우산 번호</TableHead>
                                 <TableHead>전화번호</TableHead>
-                                <TableHead>대여 행상</TableHead>
+                                <TableHead>대여 행사</TableHead>
                                 <TableHead>대여 시각</TableHead>
                                 <TableHead>반납 시각</TableHead>
                             </TableRow>
