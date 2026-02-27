@@ -1,0 +1,417 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { Thermometer, Grid3X3, Users, AlertTriangle, Headset, MessageCircle, Instagram, Facebook, Youtube, Camera, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Html5Qrcode } from 'html5-qrcode';
+
+export default function RentForm({
+    boothId,
+    boothName,
+    boothPhotoUrl,
+}: {
+    boothId: string;
+    boothName: string;
+    boothPhotoUrl: string;
+}) {
+    const [privacyAgreed, setPrivacyAgreed] = useState(false);
+    const [safetyAgreed, setSafetyAgreed] = useState(false);
+    const [phone1, setPhone1] = useState('010');
+    const [phone2, setPhone2] = useState('');
+    const [phone3, setPhone3] = useState('');
+    const [umbrellaId, setUmbrellaId] = useState('');
+    const [isScanning, setIsScanning] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const router = useRouter();
+
+    const extractUmbrellaId = (value: string): string => {
+        try {
+            const url = new URL(value);
+            const pathParts = url.pathname.split('/').filter(Boolean);
+            // URL 형식: /rent/UB-10023?booth=xxx → pathParts = ['rent', 'UB-10023']
+            if (pathParts.length >= 2 && pathParts[0] === 'rent') {
+                return pathParts[1];
+            }
+        } catch {
+            // URL이 아닌 경우 그대로 반환
+        }
+        return value;
+    };
+
+    const startScanner = async () => {
+        setIsScanning(true);
+        try {
+            const scanner = new Html5Qrcode('qr-reader');
+            scannerRef.current = scanner;
+            await scanner.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    const id = extractUmbrellaId(decodedText);
+                    setUmbrellaId(id);
+                    stopScanner();
+                    toast.success(`우산 번호 인식: ${id}`);
+                },
+                () => { } // ignore scan errors
+            );
+        } catch (err) {
+            toast.error('카메라를 사용할 수 없습니다. 카메라 권한을 확인해주세요.');
+            setIsScanning(false);
+        }
+    };
+
+    const stopScanner = async () => {
+        if (scannerRef.current) {
+            try {
+                await scannerRef.current.stop();
+                scannerRef.current.clear();
+            } catch { }
+            scannerRef.current = null;
+        }
+        setIsScanning(false);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.stop().catch(() => { });
+            }
+        };
+    }, []);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!privacyAgreed) {
+            toast.error('개인정보 수집 및 이용에 동의해주세요.');
+            return;
+        }
+        if (!safetyAgreed) {
+            toast.error('안전수칙사항 확인에 동의해주세요.');
+            return;
+        }
+        if (phone2.length < 3 || phone3.length < 4) {
+            toast.error('올바른 휴대전화 번호를 입력해주세요.');
+            return;
+        }
+        if (!umbrellaId) {
+            toast.error('우산 QR 코드를 스캔해주세요.');
+            return;
+        }
+
+        const phone = `${phone1}-${phone2}-${phone3}`;
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch('/api/rent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ umbrellaId, phone, boothId }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.error || '대여 처리에 실패했습니다.');
+                setIsSubmitting(false);
+                return;
+            }
+
+            setIsSuccess(true);
+            toast.success('대여가 완료되었습니다!');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (error) {
+            toast.error('네트워크 오류가 발생했습니다.');
+            setIsSubmitting(false);
+        }
+    };
+
+    if (isSuccess) {
+        return (
+            <div className="w-full max-w-md mx-auto bg-white min-h-screen relative shadow-2xl flex flex-col items-center justify-center p-8 space-y-6">
+                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-4xl">☂️</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">대여가 완료되었습니다!</h2>
+                <div className="w-full bg-gray-50 p-6 rounded-xl space-y-4 border border-gray-100">
+                    <div>
+                        <p className="text-sm text-gray-500 mb-1">대여 장소</p>
+                        <p className="font-bold text-lg text-gray-900">{boothName}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500 mb-1">우산 번호</p>
+                        <p className="font-mono font-bold text-xl text-blue-600">{umbrellaId}</p>
+                    </div>
+                </div>
+                <Button className="w-full h-14 text-lg mt-8 rounded-xl" onClick={() => router.push('/')}>
+                    처음으로 돌아가기
+                </Button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full max-w-md mx-auto bg-white min-h-screen relative shadow-2xl pb-safe">
+            {/* Event Header - 행사명 + 이미지 */}
+            <div className="relative w-full h-[750px] overflow-hidden">
+                <img
+                    src={boothPhotoUrl}
+                    alt={boothName}
+                    className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <p className="text-white/80 text-sm font-medium mb-1">우산 대여</p>
+                    <h1 className="text-white text-2xl font-extrabold">{boothName}</h1>
+                </div>
+            </div>
+
+            {/* Safety Guidelines */}
+            <div className="px-6 py-12 space-y-14">
+                <div className="space-y-4 text-center">
+                    <h2 className="text-[22px] font-extrabold text-[#111] leading-[1.3] break-keep">
+                        안전한 체험을 위해<br />
+                        아래 안전수칙을 숙지하고<br />
+                        연락처를 입력해주세요!
+                    </h2>
+                    <p className="text-[12px] font-bold text-[#111] mt-3 leading-[1.4] break-keep">
+                        For a safe experience,<br />
+                        please read and agree to the safety guidelines below,<br />
+                        then enter your contact information.
+                    </p>
+                </div>
+
+                <div className="space-y-12">
+                    {/* Rule 1 */}
+                    <div className="flex flex-col items-center text-center">
+                        <Thermometer className="w-12 h-12 text-[#5400d3] mb-4" strokeWidth={2.5} />
+                        <div className="bg-[#5400d3] text-white p-5 w-full rounded-xl font-bold text-[15px] leading-relaxed break-keep">
+                            손잡이(배터리)부분에 열감이 느껴지거나 연기 또는 타는 냄새가 나면 즉시 전원을 <span className="underline highlight-white">끄고</span> 부스에 반납하세요!
+                        </div>
+                        <p className="text-[#5400d3] text-[12px] font-bold mt-4 leading-tight">
+                            If the handle (battery) becomes hot, immediately turn off<br />the power and return it to the booth.
+                        </p>
+                    </div>
+
+                    {/* Rule 2 */}
+                    <div className="flex flex-col items-center text-center">
+                        <Grid3X3 className="w-12 h-12 text-[#5400d3] mb-4" strokeWidth={2.5} />
+                        <div className="bg-[#5400d3] text-white p-5 w-full rounded-xl font-bold text-[15px] leading-relaxed break-keep">
+                            체험부스 주변에서만 사용해주세요! <span className="text-xs font-normal opacity-90 block mt-1">(반경 200m 이내)</span>
+                            <div className="text-[11px] font-normal opacity-90 mt-2 tracking-tight">(실내출입금지, 장소를 이탈하여 발생되는 사고는 본인이 부담합니다.)</div>
+                        </div>
+                        <p className="text-[#5400d3] text-[12px] font-bold mt-4 leading-tight tracking-tight">
+                            For your safety, use the device only in the designated area.<br />
+                            Accidents caused by entering restricted areas or<br />
+                            leaving designated zones are the individual's responsibility.
+                        </p>
+                    </div>
+
+                    {/* Rule 3 */}
+                    <div className="flex flex-col items-center text-center">
+                        <Users className="w-12 h-12 text-[#5400d3] mb-4" strokeWidth={2.5} />
+                        <div className="bg-[#5400d3] text-white p-5 w-full rounded-xl font-bold text-[15px] leading-relaxed break-keep">
+                            13세 미만 어린이는 보호자 동반 및 감독 하에<br />체험 가능하며 해당 안전수칙을 지도해주세요!
+                        </div>
+                        <p className="text-[#5400d3] text-[12px] font-bold mt-4 leading-tight">
+                            Children under the age of 13 must be accompanied and<br />supervised by a guardian.
+                        </p>
+                    </div>
+
+                    {/* Rule 4 */}
+                    <div className="flex flex-col items-center text-center">
+                        <AlertTriangle className="w-12 h-12 text-[#5400d3] mb-4" strokeWidth={2.5} />
+                        <div className="bg-[#5400d3] text-white p-5 w-full rounded-xl font-bold text-[15px] leading-relaxed break-keep tracking-tight">
+                            차량통행이 많은 곳, 인파가 밀집된 곳은 피해주세요.<br />
+                            촬영 목적 외 우산 사용 금지합니다.<br />
+                            <span className="text-[11px] font-normal opacity-90 mt-2 block">(우산을 들고 뛰는 행위, 우산을 파손하는 행위 등)</span>
+                        </div>
+                        <p className="text-[#5400d3] text-[12px] font-bold mt-4 leading-tight tracking-tight">
+                            Use of the umbrella is restricted<br />to filming purposes only.<br />(Do not run with the umbrella or damage it.)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Form Section */}
+            <div className="bg-[#FDF3F8] px-6 py-12 space-y-10">
+                <form onSubmit={handleSubmit} className="space-y-10">
+                    {/* Privacy */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            개인정보 수집 및 이용 동의 <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+                        <div className="bg-white p-5 rounded-lg h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm">
+                            회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.<br /><br />
+                            <strong>제1조 (개인정보의 처리목적)</strong><br />
+                            회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+                        </div>
+                        <div className="flex items-center gap-3 pt-2 pl-1 cursor-pointer" onClick={() => setPrivacyAgreed(!privacyAgreed)}>
+                            <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${privacyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
+                                {privacyAgreed && <span className="text-black text-sm font-bold">✓</span>}
+                            </div>
+                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
+                                개인정보 수집 및 이용에 동의합니다.
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Safety Agree */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            위의 안전수칙사항을 확인하셨나요? <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+                        <div className="flex items-center gap-3 pl-1 cursor-pointer" onClick={() => setSafetyAgreed(!safetyAgreed)}>
+                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${safetyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
+                                {safetyAgreed && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
+                            </div>
+                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
+                                네, 확인했습니다.
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Phone */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            연락처 <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="tel"
+                                maxLength={3}
+                                value={phone1}
+                                onChange={(e) => setPhone1(e.target.value.replace(/\D/g, ''))}
+                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
+                            />
+                            <span className="text-gray-300 font-bold">-</span>
+                            <input
+                                type="tel"
+                                maxLength={4}
+                                value={phone2}
+                                onChange={(e) => setPhone2(e.target.value.replace(/\D/g, ''))}
+                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
+                            />
+                            <span className="text-gray-300 font-bold">-</span>
+                            <input
+                                type="tel"
+                                maxLength={4}
+                                value={phone3}
+                                onChange={(e) => setPhone3(e.target.value.replace(/\D/g, ''))}
+                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
+                            />
+                        </div>
+                    </div>
+
+                    {/* QR Scanner */}
+                    <div className="space-y-4 pb-6">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            우산 QR 인식 <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+
+                        {umbrellaId ? (
+                            <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-1">스캔된 우산 번호</p>
+                                    <p className="font-mono font-bold text-xl text-[#5400d3]">{umbrellaId}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setUmbrellaId('')}
+                                    className="text-gray-400 hover:text-gray-600 p-2"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div id="qr-reader" className={`w-full rounded-xl overflow-hidden ${isScanning ? '' : 'hidden'}`} />
+                                {isScanning ? (
+                                    <button
+                                        type="button"
+                                        onClick={stopScanner}
+                                        className="w-full py-4 rounded-xl bg-gray-200 text-gray-700 font-bold text-base flex items-center justify-center gap-2"
+                                    >
+                                        <X className="w-5 h-5" />
+                                        스캔 취소
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={startScanner}
+                                        className="w-full py-4 rounded-xl bg-[#5400d3] text-white font-bold text-base flex items-center justify-center gap-2 shadow-sm hover:bg-[#4500b0] transition-colors"
+                                    >
+                                        <Camera className="w-5 h-5" />
+                                        QR 코드 스캔하기
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Submit */}
+                    <div className="flex justify-center pb-6">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="bg-[#FFEA00] text-gray-900 font-bold text-lg py-4 px-12 rounded-xl shadow-md w-48 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
+                        >
+                            {isSubmitting ? '처리중...' : '작성'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Footer */}
+            <footer className="bg-black text-[#f5f5f5] px-8 py-12 text-[13px] font-light leading-[1.8] pb-36">
+                <div className="space-y-8">
+                    <div>
+                        <p className="font-semibold text-sm mb-2 text-white tracking-widest">밝히는 사람들</p>
+                        <p>사업자등록번호 689-29-01176</p>
+                        <p>부산광역시 사하구 두송로 188번길 43 1층</p>
+                        <p>통신판매업 신고번호 제2022-부산사하구-0853</p>
+                        <p>대표 위.동.영.</p>
+                    </div>
+                    <div>
+                        <p>고객센터 051 255 2080</p>
+                        <p>이메일 saramdle88@gmail.com</p>
+                        <p>팩스 051 255 2082</p>
+                    </div>
+                    <div className="pt-4 text-gray-400 border-t border-gray-800">
+                        <p className="mb-6">Copyright © 2026 밝히는 사람들 All rights reserved.</p>
+                        <div className="flex gap-4">
+                            <a href="#" className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-white hover:text-black transition-colors">
+                                <Instagram className="w-4 h-4" />
+                            </a>
+                            <a href="#" className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-white hover:text-black transition-colors">
+                                <Facebook className="w-4 h-4" />
+                            </a>
+                            <a href="#" className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-white hover:text-black transition-colors">
+                                <Youtube className="w-4 h-4" />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+
+            {/* Floating Action Buttons */}
+            <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+                <a href="tel:051-255-2080" className="bg-[#FFE600] text-black w-[90px] h-[72px] rounded-[24px] shadow-2xl flex flex-col items-center justify-center hover:scale-105 transition-transform">
+                    <MessageCircle className="w-7 h-7 fill-black mb-1" />
+                    <span className="text-[12px] font-black tracking-tight">카톡상담</span>
+                </a>
+                <a href="tel:051-255-2080" className="bg-gray-500 text-white w-[110px] h-[64px] rounded-[20px] shadow-xl flex flex-col items-center justify-center hover:scale-105 transition-transform absolute right-0 top-[85px]">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                        <Headset className="w-4 h-4" />
+                        <span className="text-[12px] font-bold tracking-tight">상담문의</span>
+                    </div>
+                    <span className="text-[16px] font-black tracking-tighter">051 255 2080</span>
+                </a>
+            </div>
+        </div>
+    );
+}
