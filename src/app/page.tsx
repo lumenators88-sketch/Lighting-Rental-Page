@@ -17,7 +17,7 @@ export default function Home() {
             </div>
             <span className="font-bold text-xl text-slate-800 tracking-tight">Umbrellab</span>
           </div>
-          <Link href="/admin">
+          <Link href="/admin/login">
             <Button variant="ghost" className="text-slate-600 font-medium">
               관리자 로그인
             </Button>
