@@ -5,26 +5,27 @@ export function proxy(req: NextRequest) {
     const url = req.nextUrl;
 
     if (url.pathname.startsWith('/admin')) {
-        const basicAuth = req.headers.get('authorization');
+        // const basicAuth = req.headers.get('authorization');
 
-        if (basicAuth) {
-            const authValue = basicAuth.split(' ')[1];
-            const [user, pwd] = atob(authValue).split(':');
+        // if (basicAuth) {
+        //     const authValue = basicAuth.split(' ')[1];
+        //     const [user, pwd] = atob(authValue).split(':');
 
-            const validUser = 'admin';
-            const validPwd = process.env.ADMIN_PASSWORD || '1234'; // Default for local dev
+        //     const validUser = 'admin';
+        //     const validPwd = process.env.ADMIN_PASSWORD || '1234'; // Default for local dev
 
-            if (user === validUser && pwd === validPwd) {
-                return NextResponse.next();
-            }
-        }
+        //     if (user === validUser && pwd === validPwd) {
+        //         return NextResponse.next();
+        //     }
+        // }
 
-        return new NextResponse('Auth required', {
-            status: 401,
-            headers: {
-                'WWW-Authenticate': 'Basic realm="Secure Area"',
-            },
-        });
+        // return new NextResponse('Auth required', {
+        //     status: 401,
+        //     headers: {
+        //         'WWW-Authenticate': 'Basic realm="Secure Area"',
+        //     },
+        // });
+        return NextResponse.next();
     }
 
     return NextResponse.next();
