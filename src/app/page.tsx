@@ -65,7 +65,7 @@ export default function Home() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="w-full sm:w-auto h-14 px-8 text-lg rounded-full shadow-sm hover:bg-slate-50" asChild>
-              <Link href="/rent/test?booth=test">
+              <Link href="/rent/booth?booth=test">
                 대여 체험해보기
               </Link>
             </Button>
