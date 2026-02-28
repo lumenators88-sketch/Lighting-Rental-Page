@@ -21,7 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, photoUrl, umbrellaStartNumber = null, umbrellaEndNumber = null } = body;
+        const { name, photoUrl, umbrellaStartNumber = null, umbrellaEndNumber = null, formFields = [] } = body;
 
         if (!name || !photoUrl) {
             return NextResponse.json(
@@ -56,6 +56,27 @@ export async function POST(request: Request) {
                 .update({ currentBoothId: booth.id, updatedAt: new Date().toISOString() })
                 .gte('umbrellaNumber', startNum)
                 .lte('umbrellaNumber', endNum);
+        }
+
+        // Insert initial form fields if provided
+        if (formFields && formFields.length > 0 && booth) {
+            const fieldsToInsert = formFields.map((field: any, index: number) => ({
+                boothId: booth.id,
+                label: field.label,
+                type: field.type,
+                options: field.options,
+                required: field.required,
+                fieldOrder: index,
+            }));
+
+            const { error: fieldsError } = await supabase
+                .from('FormField')
+                .insert(fieldsToInsert);
+
+            if (fieldsError) {
+                console.error("Error inserting form fields during booth creation:", fieldsError);
+                // We don't fail the whole booth creation just for fields, but we should log it
+            }
         }
 
         return NextResponse.json({ success: true, booth });

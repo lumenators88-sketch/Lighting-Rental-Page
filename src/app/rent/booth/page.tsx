@@ -36,12 +36,20 @@ export default async function RentPage({ searchParams }: PageProps) {
         );
     }
 
+    // 커스텀 폼 필드 조회
+    const { data: formFields } = await supabase
+        .from('FormField')
+        .select('*')
+        .eq('boothId', boothId)
+        .order('fieldOrder', { ascending: true });
+
     return (
         <div className="min-h-screen bg-gray-100 flex justify-center">
             <RentForm
                 boothId={booth.id}
                 boothName={booth.name}
                 boothPhotoUrl={booth.photoUrl}
+                formFields={formFields || []}
             />
         </div>
     );

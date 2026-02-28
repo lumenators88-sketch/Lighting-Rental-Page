@@ -40,6 +40,8 @@ export async function POST(
 
         if (updateError) throw updateError;
 
+
+
         // Delete all rental history associated with this booth
         const { error: deleteError } = await supabase
             .from('Rental')

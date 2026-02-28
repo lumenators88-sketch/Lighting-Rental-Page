@@ -3,18 +3,30 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Thermometer, Grid3X3, Users, AlertTriangle, Headset, MessageCircle, Instagram, Facebook, Youtube, Camera, X } from 'lucide-react';
+import { Thermometer, Grid3X3, Users, AlertTriangle, Headset, MessageCircle, Instagram, Facebook, Youtube, Camera, X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Html5Qrcode } from 'html5-qrcode';
+
+type FormField = {
+    id: string;
+    boothId: string;
+    label: string;
+    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating';
+    options: string[] | null;
+    required: boolean;
+    fieldOrder: number;
+};
 
 export default function RentForm({
     boothId,
     boothName,
     boothPhotoUrl,
+    formFields = [],
 }: {
     boothId: string;
     boothName: string;
     boothPhotoUrl: string;
+    formFields?: FormField[];
 }) {
     const [privacyAgreed, setPrivacyAgreed] = useState(false);
     const [safetyAgreed, setSafetyAgreed] = useState(false);
@@ -26,8 +38,48 @@ export default function RentForm({
     const [isManualInput, setIsManualInput] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [customData, setCustomData] = useState<Record<string, any>>({});
+    const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const router = useRouter();
+
+    const updateCustomField = (fieldId: string, value: any) => {
+        setCustomData(prev => ({ ...prev, [fieldId]: value }));
+    };
+
+    const handleCustomImageUpload = async (fieldId: string, file: File) => {
+        setUploadingFields(prev => ({ ...prev, [fieldId]: true }));
+        try {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result as string;
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64 }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                updateCustomField(fieldId, data.url);
+                toast.success('사진이 업로드되었습니다.');
+                setUploadingFields(prev => ({ ...prev, [fieldId]: false }));
+            };
+            reader.readAsDataURL(file);
+        } catch {
+            toast.error('사진 업로드에 실패했습니다.');
+            setUploadingFields(prev => ({ ...prev, [fieldId]: false }));
+        }
+    };
+
+    const toggleMultiSelect = (fieldId: string, option: string) => {
+        setCustomData(prev => {
+            const current: string[] = prev[fieldId] || [];
+            const updated = current.includes(option)
+                ? current.filter((o: string) => o !== option)
+                : [...current, option];
+            return { ...prev, [fieldId]: updated };
+        });
+    };
 
     const extractUmbrellaId = (value: string): string => {
         try {
@@ -104,6 +156,25 @@ export default function RentForm({
             return;
         }
 
+        // 커스텀 필드 필수 검증
+        for (const field of formFields) {
+            if (field.required) {
+                const val = customData[field.id];
+                if (val === undefined || val === '' || (Array.isArray(val) && val.length === 0)) {
+                    toast.error(`"${field.label}" 항목을 입력해주세요.`);
+                    return;
+                }
+            }
+        }
+
+        // customData를 label 기반으로 변환 (저장용)
+        const labeledCustomData: Record<string, any> = {};
+        for (const field of formFields) {
+            if (customData[field.id] !== undefined && customData[field.id] !== '') {
+                labeledCustomData[field.label] = customData[field.id];
+            }
+        }
+
         const phone = `${phone1}-${phone2}-${phone3}`;
 
         setIsSubmitting(true);
@@ -111,7 +182,12 @@ export default function RentForm({
             const res = await fetch('/api/rent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ umbrellaId, phone, boothId }),
+                body: JSON.stringify({
+                    umbrellaId,
+                    phone,
+                    boothId,
+                    customData: Object.keys(labeledCustomData).length > 0 ? labeledCustomData : undefined,
+                }),
             });
 
             const data = await res.json();
@@ -241,40 +317,181 @@ export default function RentForm({
             {/* Form Section */}
             <div className="bg-[#FDF3F8] px-6 py-12 space-y-10">
                 <form onSubmit={handleSubmit} className="space-y-10">
-                    {/* Privacy */}
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
-                            개인정보 수집 및 이용 동의 <span className="text-[#ff5252] text-[10px]">●</span>
-                        </label>
-                        <div className="bg-white p-5 rounded-lg h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm">
-                            회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.<br /><br />
-                            <strong>제1조 (개인정보의 처리목적)</strong><br />
-                            회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
-                        </div>
-                        <div className="flex items-center gap-3 pt-2 pl-1 cursor-pointer" onClick={() => setPrivacyAgreed(!privacyAgreed)}>
-                            <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${privacyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
-                                {privacyAgreed && <span className="text-black text-sm font-bold">✓</span>}
-                            </div>
-                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
-                                개인정보 수집 및 이용에 동의합니다.
-                            </label>
-                        </div>
-                    </div>
+                    {/* Custom Fields */}
+                    {formFields.length > 0 && (
+                        <div className="space-y-6">
+                            {formFields.map((field) => (
+                                <div key={field.id} className="space-y-3">
+                                    <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                                        {field.label}
+                                        {field.required && <span className="text-[#ff5252] text-[10px]">●</span>}
+                                    </label>
 
-                    {/* Safety Agree */}
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
-                            위의 안전수칙사항을 확인하셨나요? <span className="text-[#ff5252] text-[10px]">●</span>
-                        </label>
-                        <div className="flex items-center gap-3 pl-1 cursor-pointer" onClick={() => setSafetyAgreed(!safetyAgreed)}>
-                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${safetyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
-                                {safetyAgreed && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
-                            </div>
-                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
-                                네, 확인했습니다.
-                            </label>
+                                    {field.type === 'text' && (
+                                        <input
+                                            type="text"
+                                            placeholder={`${field.label}을(를) 입력해주세요`}
+                                            value={customData[field.id] || ''}
+                                            onChange={(e) => updateCustomField(field.id, e.target.value)}
+                                            className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 transition-all"
+                                        />
+                                    )}
+
+                                    {field.type === 'textarea' && (
+                                        <textarea
+                                            placeholder={`${field.label}을(를) 입력해주세요`}
+                                            value={customData[field.id] || ''}
+                                            onChange={(e) => updateCustomField(field.id, e.target.value)}
+                                            rows={4}
+                                            className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 resize-none transition-all"
+                                        />
+                                    )}
+
+                                    {field.type === 'number' && (
+                                        <input
+                                            type="number"
+                                            placeholder={`${field.label}을(를) 입력해주세요`}
+                                            value={customData[field.id] || ''}
+                                            onChange={(e) => updateCustomField(field.id, e.target.value)}
+                                            className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 transition-all"
+                                        />
+                                    )}
+
+                                    {field.type === 'date' && (
+                                        <input
+                                            type="date"
+                                            value={customData[field.id] || ''}
+                                            onChange={(e) => updateCustomField(field.id, e.target.value)}
+                                            className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 transition-all"
+                                        />
+                                    )}
+
+                                    {field.type === 'select' && field.options && (
+                                        <div className="grid grid-cols-2 gap-3 mt-2">
+                                            {(field.options as string[]).map((option) => {
+                                                const isSelected = customData[field.id] === option;
+                                                return (
+                                                    <div
+                                                        key={option}
+                                                        className={`flex items-center justify-center py-3.5 px-4 rounded-[14px] cursor-pointer transition-all duration-200 border-2 select-none ${isSelected
+                                                                ? 'border-[#5400d3] bg-[#5400d3]/5 text-[#5400d3] font-bold shadow-sm'
+                                                                : 'border-transparent bg-white text-gray-600 font-medium hover:bg-gray-50 hover:border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+                                                            }`}
+                                                        onClick={() => updateCustomField(field.id, option)}
+                                                    >
+                                                        <span className="text-[15px] text-center w-full truncate leading-tight">{option}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {field.type === 'multi_select' && field.options && (
+                                        <div className="flex flex-wrap gap-2.5 mt-2">
+                                            {(field.options as string[]).map((option) => {
+                                                const selected = (customData[field.id] || []).includes(option);
+                                                return (
+                                                    <div
+                                                        key={option}
+                                                        className={`flex items-center gap-2 py-2.5 px-4 rounded-full cursor-pointer transition-all duration-200 border-2 select-none ${selected
+                                                                ? 'border-[#5400d3] bg-[#5400d3] text-white font-bold shadow-md shadow-[#5400d3]/20'
+                                                                : 'border-transparent bg-white text-gray-600 font-medium hover:bg-gray-50 hover:border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+                                                            }`}
+                                                        onClick={() => toggleMultiSelect(field.id, option)}
+                                                    >
+                                                        <span className="text-[14px]">{option}</span>
+                                                        {selected && <div className="w-1.5 h-1.5 rounded-full bg-[#FFEA00] ml-1" />}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {field.type === 'rating' && (
+                                        <div className="flex items-center gap-1.5 bg-white p-4 rounded-[20px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] w-fit">
+                                            {[1, 2, 3, 4, 5].map((star) => {
+                                                const isActive = (customData[field.id] || 0) >= star;
+                                                return (
+                                                    <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => updateCustomField(field.id, star)}
+                                                        className={`text-[32px] leading-none transition-all duration-300 hover:scale-110 active:scale-90 ${isActive
+                                                                ? 'text-[#FFEA00] drop-shadow-[0_2px_4px_rgba(255,234,0,0.4)]'
+                                                                : 'text-gray-200 hover:text-gray-300'
+                                                            }`}
+                                                    >
+                                                        ★
+                                                    </button>
+                                                );
+                                            })}
+                                            {customData[field.id] && (
+                                                <div className="ml-3 bg-[#5400d3] text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                                                    {customData[field.id]}점
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {field.type === 'image' && (
+                                        <div className="mt-2">
+                                            {customData[field.id] ? (
+                                                <div className="relative group rounded-[20px] overflow-hidden shadow-md">
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center gap-3">
+                                                        <label className="bg-white/90 text-black px-4 py-2 rounded-full text-sm font-bold cursor-pointer hover:bg-white transition-colors flex items-center gap-2">
+                                                            <Upload className="w-4 h-4" />
+                                                            다시 선택
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) handleCustomImageUpload(field.id, file);
+                                                                }}
+                                                            />
+                                                        </label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateCustomField(field.id, '')}
+                                                            className="bg-red-500/90 text-white w-9 h-9 flex items-center justify-center rounded-full hover:bg-red-500 transition-colors"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <img
+                                                        src={customData[field.id]}
+                                                        alt={field.label}
+                                                        className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <label className="flex flex-col items-center justify-center w-full h-40 bg-white rounded-[20px] border-2 border-dashed border-gray-200 cursor-pointer hover:border-[#5400d3] hover:bg-[#5400d3]/5 transition-all group shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                                                    <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all mb-3">
+                                                        <Upload className="w-5 h-5 text-gray-400 group-hover:text-[#5400d3]" />
+                                                    </div>
+                                                    <span className="text-[14px] font-bold text-gray-600 group-hover:text-[#5400d3]">
+                                                        {uploadingFields[field.id] ? '업로드 중...' : '터치하여 사진 업로드'}
+                                                    </span>
+                                                    <span className="text-[12px] text-gray-400 mt-1 font-medium">최대 10MB</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        disabled={uploadingFields[field.id]}
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) handleCustomImageUpload(field.id, file);
+                                                        }}
+                                                    />
+                                                </label>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
-                    </div>
+                    )}
 
                     {/* Phone */}
                     <div className="space-y-4">
@@ -305,6 +522,41 @@ export default function RentForm({
                                 onChange={(e) => setPhone3(e.target.value.replace(/\D/g, ''))}
                                 className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
                             />
+                        </div>
+                    </div>
+
+                    {/* Safety Agree */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            위의 안전수칙사항을 확인하셨나요? <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+                        <div className="flex items-center gap-3 pl-1 cursor-pointer" onClick={() => setSafetyAgreed(!safetyAgreed)}>
+                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${safetyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
+                                {safetyAgreed && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
+                            </div>
+                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
+                                네, 확인했습니다.
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Privacy */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            개인정보 수집 및 이용 동의 <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+                        <div className="bg-white p-5 rounded-lg h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm">
+                            회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.<br /><br />
+                            <strong>제1조 (개인정보의 처리목적)</strong><br />
+                            회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+                        </div>
+                        <div className="flex items-center gap-3 pt-2 pl-1 cursor-pointer" onClick={() => setPrivacyAgreed(!privacyAgreed)}>
+                            <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${privacyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
+                                {privacyAgreed && <span className="text-black text-sm font-bold">✓</span>}
+                            </div>
+                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
+                                개인정보 수집 및 이용에 동의합니다.
+                            </label>
                         </div>
                     </div>
 

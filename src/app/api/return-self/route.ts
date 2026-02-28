@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { updateRentalReturnInNotion } from '@/lib/notion';
 
 // GET: 전화번호로 대여 중인 우산 조회
 export async function GET(request: Request) {
@@ -25,9 +24,7 @@ export async function GET(request: Request) {
         if (error) throw error;
 
         const formattedRentals = rentals?.map(r => ({
-            ...r,
-            rentedAt: r.rentedAt && !r.rentedAt.endsWith('Z') ? r.rentedAt + 'Z' : r.rentedAt,
-            returnedAt: r.returnedAt && !r.returnedAt.endsWith('Z') ? r.returnedAt + 'Z' : r.returnedAt
+            ...r
         }));
 
         return NextResponse.json({
@@ -87,12 +84,7 @@ export async function POST(request: Request) {
 
         if (updateError) throw updateError;
 
-        if (updated.rentedAt && !updated.rentedAt.endsWith('Z')) {
-            updated.rentedAt += 'Z';
-        }
-        if (updated.returnedAt && !updated.returnedAt.endsWith('Z')) {
-            updated.returnedAt += 'Z';
-        }
+        // Supabase returns standard timestamptz with +00:00 offset
 
         // Umbrella 상태를 AVAILABLE로 복구
         const umbrellaNumber = parseInt(rental.umbrellaId, 10);
@@ -106,8 +98,7 @@ export async function POST(request: Request) {
                 .eq('umbrellaNumber', umbrellaNumber);
         }
 
-        // Notion 동기화 (백그라운드)
-        updateRentalReturnInNotion(rental.umbrellaId, new Date(returnedAt)).catch(console.error);
+        // Notion export는 대여 시점(사전 질문)에만 수행하므로 여기서는 제거
 
         return NextResponse.json({ success: true, rental: updated });
     } catch (error) {

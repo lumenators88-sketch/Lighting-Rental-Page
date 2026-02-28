@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { updateRentalReturnInNotion } from '@/lib/notion';
+import { exportSingleSurveyToNotion } from '@/lib/notion';
 
 export async function POST(request: Request) {
     try {
@@ -44,12 +44,7 @@ export async function POST(request: Request) {
 
         if (updateError) throw updateError;
 
-        if (updated.rentedAt && !updated.rentedAt.endsWith('Z')) {
-            updated.rentedAt += 'Z';
-        }
-        if (updated.returnedAt && !updated.returnedAt.endsWith('Z')) {
-            updated.returnedAt += 'Z';
-        }
+        // Supabase returns standard timestamptz with +00:00 offset
 
         // Update Umbrella status back to AVAILABLE
         const umbrellaNumber = parseInt(umbrellaId, 10);
@@ -63,8 +58,10 @@ export async function POST(request: Request) {
                 .eq('umbrellaNumber', umbrellaNumber);
         }
 
-        // Update Notion in background
-        updateRentalReturnInNotion(umbrellaId, new Date(returnedAt)).catch(console.error);
+        // Export to Notion in background if there is custom data
+        if (rental.customData && Object.keys(rental.customData).length > 0 && rental.booth?.name) {
+            exportSingleSurveyToNotion(rental.booth.name, returnedAt, rental.customData).catch(console.error);
+        }
 
         return NextResponse.json({ success: true, rental: updated });
     } catch (error) {

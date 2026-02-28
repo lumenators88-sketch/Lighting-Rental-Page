@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { addRentalRecordToNotion } from '@/lib/notion';
+import { exportSingleSurveyToNotion } from '@/lib/notion';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { umbrellaId, phone, boothId } = body;
+        const { umbrellaId, phone, boothId, customData } = body;
 
         if (!umbrellaId || !phone || !boothId) {
+            console.log("Rent API 400: Missing required fields", { umbrellaId, phone, boothId });
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
             .single();
 
         if (existing) {
+            console.log("Rent API 400: Umbrella already rented", umbrellaId);
             return NextResponse.json(
                 { error: 'Umbrella is already rented' },
                 { status: 400 }
@@ -37,6 +39,7 @@ export async function POST(request: Request) {
             .single();
 
         if (!booth) {
+            console.log("Rent API 404: Booth not found", boothId);
             return NextResponse.json(
                 { error: 'Booth not found' },
                 { status: 404 }
@@ -46,6 +49,7 @@ export async function POST(request: Request) {
         // 1. Check if Umbrella exists, is available, and belongs to this booth's range
         const umbrellaNumber = parseInt(umbrellaId, 10);
         if (isNaN(umbrellaNumber)) {
+            console.log("Rent API 400: Invalid umbrella format", umbrellaId);
             return NextResponse.json(
                 { error: 'Invalid umbrella number format' },
                 { status: 400 }
@@ -92,6 +96,7 @@ export async function POST(request: Request) {
                     phone,
                     boothId,
                     status: 'RENTED',
+                    ...(customData ? { customData } : {}),
                 }
             ])
             .select()
@@ -99,12 +104,8 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
-        if (rental.rentedAt && !rental.rentedAt.endsWith('Z')) {
-            rental.rentedAt += 'Z';
-        }
-        if (rental.returnedAt && !rental.returnedAt.endsWith('Z')) {
-            rental.returnedAt += 'Z';
-        }
+        // Supabase already returns a valid ISO string (e.g., ...+00:00).
+        // Appending 'Z' to it causes "Invalid Date" in JavaScript.
 
         // 3. Update Umbrella status to RENTED and assign to booth
         await supabase
@@ -116,13 +117,16 @@ export async function POST(request: Request) {
             })
             .eq('id', umbrella.id);
 
-        // Run notion sync in background
-        addRentalRecordToNotion({
-            umbrellaId,
-            phone,
-            boothName: booth.name,
-            rentedAt: new Date(rental.rentedAt),
-        }).catch(console.error);
+        // 4. Export customData to Notion at rent time (사전 질문)
+        if (customData && Object.keys(customData).length > 0) {
+            console.log('[Rent API] Calling exportSingleSurveyToNotion with:', {
+                boothName: booth.name,
+                rentedAt: rental.rentedAt,
+                customDataKeys: Object.keys(customData),
+                timestamp: new Date().toISOString()
+            });
+            exportSingleSurveyToNotion(booth.name, rental.rentedAt, customData, 'RENT').catch(console.error);
+        }
 
         return NextResponse.json({ success: true, rental });
     } catch (error) {

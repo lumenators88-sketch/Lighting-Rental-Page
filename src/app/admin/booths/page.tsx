@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
-import { ExternalLink, Copy, Link } from 'lucide-react';
+import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X } from 'lucide-react';
+import { Reorder } from 'framer-motion';
 
 type Booth = {
     id: string;
@@ -18,6 +19,38 @@ type Booth = {
     umbrellaStartNumber?: number;
     umbrellaEndNumber?: number;
 };
+
+type FormField = {
+    id: string;
+    boothId: string;
+    label: string;
+    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating';
+    options: string[] | null;
+    required: boolean;
+    fieldOrder: number;
+};
+
+const FIELD_TYPE_LABELS: Record<string, string> = {
+    text: '짧은 텍스트',
+    textarea: '긴 텍스트',
+    select: '단일 선택',
+    multi_select: '복수 선택',
+    image: '사진 업로드',
+    date: '날짜',
+    number: '숫자',
+    rating: '별점 (5점)',
+};
+
+const FIELD_TYPES = [
+    { id: 'text', label: '단답형', icon: Type },
+    { id: 'textarea', label: '장문형', icon: AlignLeft },
+    { id: 'select', label: '단일선택', icon: CircleDot },
+    { id: 'multi_select', label: '복수선택', icon: CheckSquare },
+    { id: 'number', label: '숫자', icon: Hash },
+    { id: 'date', label: '날짜', icon: Calendar },
+    { id: 'rating', label: '별점', icon: Star },
+    { id: 'image', label: '사진', icon: ImageIcon },
+];
 
 export default function BoothsPage() {
     const [booths, setBooths] = useState<Booth[]>([]);
@@ -30,6 +63,14 @@ export default function BoothsPage() {
     const [umbrellaEndNumber, setUmbrellaEndNumber] = useState<number | ''>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Create Booth - Form Fields State
+    const [createFormFields, setCreateFormFields] = useState<Omit<FormField, 'id' | 'boothId' | 'fieldOrder'>[]>([]);
+    const [createFieldLabel, setCreateFieldLabel] = useState('');
+    const [createFieldType, setCreateFieldType] = useState<FormField['type']>('text');
+    const [createFieldRequired, setCreateFieldRequired] = useState(false);
+    const [createFieldOptions, setCreateFieldOptions] = useState<string[]>([]);
+    const [createOptionInput, setCreateOptionInput] = useState('');
+
     // QR Modal State (simple inline)
     const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null);
 
@@ -39,6 +80,18 @@ export default function BoothsPage() {
     const [assignStart, setAssignStart] = useState<number | ''>('');
     const [assignEnd, setAssignEnd] = useState<number | ''>('');
     const [isAssigning, setIsAssigning] = useState(false);
+
+    // Form Editor Modal State
+    const [formEditorOpen, setFormEditorOpen] = useState(false);
+    const [formEditorBooth, setFormEditorBooth] = useState<Booth | null>(null);
+    const [formFields, setFormFields] = useState<FormField[]>([]);
+    const [formFieldsLoading, setFormFieldsLoading] = useState(false);
+    const [newFieldLabel, setNewFieldLabel] = useState('');
+    const [newFieldType, setNewFieldType] = useState<FormField['type']>('text');
+    const [newFieldRequired, setNewFieldRequired] = useState(false);
+    const [newFieldOptions, setNewFieldOptions] = useState<string[]>([]);
+    const [optionInput, setOptionInput] = useState('');
+    const [isAddingField, setIsAddingField] = useState(false);
 
     const fetchBooths = async () => {
         setLoading(true);
@@ -103,7 +156,8 @@ export default function BoothsPage() {
                     name,
                     photoUrl: uploadData.url,
                     umbrellaStartNumber: Number(umbrellaStartNumber),
-                    umbrellaEndNumber: Number(umbrellaEndNumber)
+                    umbrellaEndNumber: Number(umbrellaEndNumber),
+                    formFields: createFormFields
                 }),
             });
 
@@ -114,6 +168,7 @@ export default function BoothsPage() {
             setPhoto('');
             setUmbrellaStartNumber('');
             setUmbrellaEndNumber('');
+            setCreateFormFields([]);
             fetchBooths();
         } catch (err: any) {
             toast.error(err.message || '오류가 발생했습니다.');
@@ -167,6 +222,142 @@ export default function BoothsPage() {
         } catch (err: any) {
             toast.error(err.message || '행사 완료 처리 중 오류가 발생했습니다.');
         }
+    };
+
+    // Form Editor Handlers
+    const openFormEditor = async (booth: Booth) => {
+        setFormEditorBooth(booth);
+        setFormEditorOpen(true);
+        setFormFieldsLoading(true);
+        try {
+            const res = await fetch(`/api/form-fields?boothId=${booth.id}`);
+            const data = await res.json();
+            setFormFields(data.fields || []);
+        } catch {
+            toast.error('폼 필드를 불러오지 못했습니다.');
+        } finally {
+            setFormFieldsLoading(false);
+        }
+    };
+
+    const handleReorder = async (newOrder: FormField[]) => {
+        // Prevent unnecessary API calls if the order hasn't changed
+        const isSameOrder = newOrder.every((field, index) => field.id === formFields[index]?.id);
+        if (isSameOrder) return;
+
+        // Optimistically update the UI
+        setFormFields(newOrder);
+
+        try {
+            const orderedIds = newOrder.map(f => f.id);
+            const res = await fetch('/api/form-fields/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderedIds })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error);
+            }
+            // Optionally, we could show a toast: toast.success('순서가 변경되었습니다.');
+        } catch (err: any) {
+            toast.error(err.message || '순서 변경 중 오류가 발생했습니다.');
+            // Revert on failure by refetching
+            if (formEditorBooth) {
+                openFormEditor(formEditorBooth);
+            }
+        }
+    };
+
+    const handleAddField = async () => {
+        if (!formEditorBooth || !newFieldLabel.trim()) {
+            toast.error('필드 이름을 입력해주세요.');
+            return;
+        }
+
+        const needsOptions = newFieldType === 'select' || newFieldType === 'multi_select';
+        const parsedOptions = needsOptions ? newFieldOptions : null;
+
+        if (needsOptions && (!parsedOptions || parsedOptions.length < 2)) {
+            toast.error('선택형은 최소 2개 이상의 옵션을 추가해주세요.');
+            return;
+        }
+
+        setIsAddingField(true);
+        try {
+            const res = await fetch('/api/form-fields', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    boothId: formEditorBooth.id,
+                    label: newFieldLabel.trim(),
+                    type: newFieldType,
+                    options: parsedOptions,
+                    required: newFieldRequired,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            setFormFields(prev => [...prev, data.field]);
+            setNewFieldLabel('');
+            setNewFieldType('text');
+            setNewFieldRequired(false);
+            setNewFieldOptions([]);
+            setOptionInput('');
+            toast.success('필드가 추가되었습니다.');
+        } catch (err: any) {
+            toast.error(err.message || '필드 추가 실패');
+        } finally {
+            setIsAddingField(false);
+        }
+    };
+
+    const handleDeleteField = async (fieldId: string) => {
+        if (!confirm('이 필드를 삭제하시겠습니까?')) return;
+        try {
+            const res = await fetch(`/api/form-fields/${fieldId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('삭제 실패');
+            setFormFields(prev => prev.filter(f => f.id !== fieldId));
+            toast.success('필드가 삭제되었습니다.');
+        } catch {
+            toast.error('필드 삭제 중 오류가 발생했습니다.');
+        }
+    };
+
+    // Add Field in Create Mode
+    const handleAddCreateField = () => {
+        if (!createFieldLabel.trim()) {
+            toast.error('필드 이름을 입력해주세요.');
+            return;
+        }
+
+        const needsOptions = createFieldType === 'select' || createFieldType === 'multi_select';
+        const parsedOptions = needsOptions ? createFieldOptions : null;
+
+        if (needsOptions && (!parsedOptions || parsedOptions.length < 2)) {
+            toast.error('선택형은 최소 2개 이상의 옵션을 추가해주세요.');
+            return;
+        }
+
+        const newField = {
+            label: createFieldLabel.trim(),
+            type: createFieldType,
+            options: parsedOptions,
+            required: createFieldRequired,
+        };
+
+        setCreateFormFields(prev => [...prev, newField]);
+        setCreateFieldLabel('');
+        setCreateFieldType('text');
+        setCreateFieldRequired(false);
+        setCreateFieldOptions([]);
+        setCreateOptionInput('');
+    };
+
+    const handleDeleteCreateField = (index: number) => {
+        setCreateFormFields(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleAssignSubmit = async (e: React.FormEvent) => {
@@ -267,7 +458,151 @@ export default function BoothsPage() {
                                     <div className="mt-2 text-sm text-green-600 font-medium">사진 첨부 완료</div>
                                 )}
                             </div>
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
+
+                            {/* Create Booth Custom Fields */}
+                            <div className="pt-6 border-t space-y-4">
+                                <div>
+                                    <Label className="text-base font-bold">대여 폼 커스텀 질문 항목 (선택)</Label>
+                                    <p className="text-sm text-gray-500 mb-4">행사 등록 시 수집하고 싶은 정보를 추가할 수 있습니다.</p>
+                                </div>
+
+                                {/* Added Create Fields List */}
+                                <div className="space-y-2">
+                                    {createFormFields.map((field, index) => (
+                                        <div key={index} className="flex items-center justify-between bg-gray-50 border rounded-lg p-3">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-sm">{field.label}</span>
+                                                    {field.required && (
+                                                        <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded">필수</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-xs text-gray-400">{FIELD_TYPE_LABELS[field.type]}</span>
+                                                    {field.options && (
+                                                        <span className="text-xs text-gray-400">
+                                                            · {(field.options as string[]).join(', ')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
+                                                onClick={() => handleDeleteCreateField(index)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Add Create Field Editor */}
+                                <div className="bg-gray-50 rounded-xl p-4 border space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold">필드 타입 선택</Label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {FIELD_TYPES.map(ft => {
+                                                const IconComponent = ft.icon;
+                                                const isSelected = createFieldType === ft.id;
+                                                return (
+                                                    <div
+                                                        key={ft.id}
+                                                        onClick={() => setCreateFieldType(ft.id as FormField['type'])}
+                                                        className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-[hsl(264,100%,41%)] bg-[hsl(264,100%,41%)]/5 text-[hsl(264,100%,41%)]' : 'border-transparent bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-900 shadow-sm'}`}
+                                                    >
+                                                        <IconComponent className="w-4 h-4 mb-1" />
+                                                        <span className="text-[10px] font-bold text-center tracking-tight">{ft.label}</span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold">질문 제목</Label>
+                                        <Input
+                                            placeholder="예: 여행 만족도는 어떠셨나요?"
+                                            value={createFieldLabel}
+                                            onChange={e => setCreateFieldLabel(e.target.value)}
+                                            className="h-10 rounded-xl bg-white focus-visible:ring-[hsl(264,100%,41%)]"
+                                        />
+                                    </div>
+
+                                    {(createFieldType === 'select' || createFieldType === 'multi_select') && (
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold">선택 옵션 추가</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="예: 대만족"
+                                                    value={createOptionInput}
+                                                    onChange={e => setCreateOptionInput(e.target.value)}
+                                                    className="h-10 rounded-xl bg-white focus-visible:ring-[hsl(264,100%,41%)]"
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            if (createOptionInput.trim() && !createFieldOptions.includes(createOptionInput.trim())) {
+                                                                setCreateFieldOptions([...createFieldOptions, createOptionInput.trim()]);
+                                                                setCreateOptionInput('');
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    className="h-10 rounded-xl px-4 hover:bg-[hsl(264,100%,41%)] hover:text-white"
+                                                    onClick={() => {
+                                                        if (createOptionInput.trim() && !createFieldOptions.includes(createOptionInput.trim())) {
+                                                            setCreateFieldOptions([...createFieldOptions, createOptionInput.trim()]);
+                                                            setCreateOptionInput('');
+                                                        }
+                                                    }}
+                                                >추가</Button>
+                                            </div>
+                                            {createFieldOptions.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {createFieldOptions.map(opt => (
+                                                        <span key={opt} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full bg-[hsl(264,100%,41%)] text-white text-xs font-medium">
+                                                            {opt}
+                                                            <button type="button" onClick={() => setCreateFieldOptions(createFieldOptions.filter(o => o !== opt))} className="bg-white/20 hover:bg-white/40 rounded-full p-0.5 transition-colors">
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                checked={createFieldRequired}
+                                                onCheckedChange={setCreateFieldRequired}
+                                            />
+                                            <Label className="text-xs text-gray-600">필수 항목</Label>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className={`h-9 px-4 rounded-xl font-bold transition-all ${createFieldLabel.trim()
+                                                    ? 'bg-[hsl(264,100%,41%)] text-white hover:bg-[hsl(264,100%,35%)] shadow-md shadow-[hsl(264,100%,41%)]/20 hover:shadow-lg hover:-translate-y-0.5'
+                                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-60'
+                                                }`}
+                                            onClick={handleAddCreateField}
+                                            disabled={!createFieldLabel.trim()}
+                                        >
+                                            <Plus className="w-4 h-4 mr-1.5" />
+                                            필드 추가하기
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Button type="submit" className="w-full mt-6" disabled={isSubmitting}>
                                 {isSubmitting ? '등록 중...' : '행사 추가'}
                             </Button>
                         </form>
@@ -334,9 +669,15 @@ export default function BoothsPage() {
                                             <h3 className="font-bold text-lg">{booth.name}</h3>
                                             <p className="text-xs text-mono text-gray-500">ID: {booth.id.split('-')[0]}</p>
                                         </div>
-                                        <Button variant="outline" size="sm" onClick={() => setSelectedBooth(booth)}>
-                                            우산 QR
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => openFormEditor(booth)}>
+                                                <FileEdit className="w-3.5 h-3.5 mr-1" />
+                                                폼 편집
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => setSelectedBooth(booth)}>
+                                                우산 QR
+                                            </Button>
+                                        </div>
                                     </div>
                                     {booth.umbrellaStartNumber && booth.umbrellaEndNumber ? (
                                         <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
@@ -445,6 +786,200 @@ export default function BoothsPage() {
                             </CardContent>
                         </Card>
                     )}
+                    {/* Form Editor Modal */}
+                    {formEditorOpen && formEditorBooth && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FileEdit className="w-5 h-5" />
+                                        신청 폼 편집
+                                    </CardTitle>
+                                    <p className="text-sm text-gray-500">{formEditorBooth.name}</p>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    {/* 기존 필드 목록 */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-semibold">등록된 필드</Label>
+                                        {formFieldsLoading ? (
+                                            <p className="text-sm text-gray-400">불러오는 중...</p>
+                                        ) : formFields.length === 0 ? (
+                                            <div className="bg-gray-50 rounded-lg p-4 border border-dashed border-gray-200 text-center">
+                                                <p className="text-sm text-gray-400">등록된 커스텀 필드가 없습니다.</p>
+                                                <p className="text-xs text-gray-400 mt-1">아래에서 새 필드를 추가해주세요.</p>
+                                            </div>
+                                        ) : (
+                                            <Reorder.Group
+                                                axis="y"
+                                                values={formFields}
+                                                onReorder={handleReorder}
+                                                className="space-y-2"
+                                            >
+                                                {formFields.map((field) => (
+                                                    <Reorder.Item
+                                                        key={field.id}
+                                                        value={field}
+                                                        className="flex items-center gap-3 bg-white border rounded-lg p-3 hover:shadow-sm transition-shadow cursor-grab active:cursor-grabbing"
+                                                    >
+                                                        <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-sm">{field.label}</span>
+                                                                {field.required && (
+                                                                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded">필수</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-xs text-gray-400">{FIELD_TYPE_LABELS[field.type]}</span>
+                                                                {field.options && (
+                                                                    <span className="text-xs text-gray-400">
+                                                                        · {(field.options as string[]).join(', ')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
+                                                            onPointerDown={(e) => e.stopPropagation()} // Prevent drag start when clicking delete
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteField(field.id);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </Reorder.Item>
+                                                ))}
+                                            </Reorder.Group>
+                                        )}
+                                    </div>
+
+                                    {/* 새 필드 추가 영역 */}
+                                    <div className="border-t pt-4 space-y-4">
+                                        <Label className="text-sm font-semibold flex items-center gap-1">
+                                            <Plus className="w-4 h-4" />
+                                            새 필드 추가
+                                        </Label>
+
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">필드 타입 선택</Label>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {FIELD_TYPES.map(ft => {
+                                                        const IconComponent = ft.icon;
+                                                        const isSelected = newFieldType === ft.id;
+                                                        return (
+                                                            <div
+                                                                key={ft.id}
+                                                                onClick={() => setNewFieldType(ft.id as FormField['type'])}
+                                                                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-[hsl(264,100%,41%)] bg-[hsl(264,100%,41%)]/5 text-[hsl(264,100%,41%)]' : 'border-transparent bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+                                                            >
+                                                                <IconComponent className="w-5 h-5 mb-1.5" />
+                                                                <span className="text-[11px] font-bold text-center tracking-tight">{ft.label}</span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">질문 제목</Label>
+                                                <Input
+                                                    placeholder="예: 여행 만족도는 어떠셨나요?"
+                                                    value={newFieldLabel}
+                                                    onChange={e => setNewFieldLabel(e.target.value)}
+                                                    className="h-11 rounded-xl bg-gray-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[hsl(264,100%,41%)] focus-visible:ring-offset-0 focus-visible:border-[hsl(264,100%,41%)] transition-all"
+                                                />
+                                            </div>
+
+                                            {(newFieldType === 'select' || newFieldType === 'multi_select') && (
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs">선택 옵션 추가 (입력 후 Enter 혹은 추가버튼)</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            placeholder="예: 대만족"
+                                                            value={optionInput}
+                                                            onChange={e => setOptionInput(e.target.value)}
+                                                            className="h-11 rounded-xl bg-gray-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[hsl(264,100%,41%)] focus-visible:ring-offset-0 focus-visible:border-[hsl(264,100%,41%)] transition-all"
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (optionInput.trim() && !newFieldOptions.includes(optionInput.trim())) {
+                                                                        setNewFieldOptions([...newFieldOptions, optionInput.trim()]);
+                                                                        setOptionInput('');
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="secondary"
+                                                            className="h-11 rounded-xl px-5 transition-colors hover:bg-[hsl(264,100%,41%)] hover:text-white"
+                                                            onClick={() => {
+                                                                if (optionInput.trim() && !newFieldOptions.includes(optionInput.trim())) {
+                                                                    setNewFieldOptions([...newFieldOptions, optionInput.trim()]);
+                                                                    setOptionInput('');
+                                                                }
+                                                            }}
+                                                        >추가</Button>
+                                                    </div>
+                                                    {newFieldOptions.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2 mt-3 p-3 bg-gray-50 rounded-xl min-h-[50px]">
+                                                            {newFieldOptions.map(opt => (
+                                                                <span key={opt} className="inline-flex items-center gap-1.5 pl-3.5 pr-1.5 py-1.5 rounded-full bg-[hsl(264,100%,41%)] text-white text-[13px] font-bold shadow-sm">
+                                                                    {opt}
+                                                                    <button type="button" onClick={() => setNewFieldOptions(newFieldOptions.filter(o => o !== opt))} className="bg-white/20 hover:bg-white/40 rounded-full p-1 transition-colors">
+                                                                        <X className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                checked={newFieldRequired}
+                                                onCheckedChange={setNewFieldRequired}
+                                            />
+                                            <Label className="text-xs text-gray-600">필수 항목</Label>
+                                        </div>
+
+                                        <Button
+                                            className="w-full h-11 rounded-xl text-base font-bold shadow-md shadow-black/5 hover:-translate-y-0.5 transition-all"
+                                            onClick={handleAddField}
+                                            disabled={isAddingField || !newFieldLabel.trim()}
+                                        >
+                                            {isAddingField ? '추가 중...' : '필드 추가하기'}
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex justify-end pt-2 border-t">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setFormEditorOpen(false);
+                                                setFormEditorBooth(null);
+                                                setFormFields([]);
+                                                setNewFieldLabel('');
+                                                setNewFieldType('text');
+                                                setNewFieldRequired(false);
+                                                setNewFieldOptions([]);
+                                                setOptionInput('');
+                                            }}
+                                        >
+                                            닫기
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+
                     {/* Assign Modal Overlay */}
                     {assignModalOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

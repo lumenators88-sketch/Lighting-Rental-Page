@@ -11,9 +11,7 @@ export async function GET() {
         if (error) throw error;
 
         const formattedRentals = rentals?.map(r => ({
-            ...r,
-            rentedAt: r.rentedAt && !r.rentedAt.endsWith('Z') ? r.rentedAt + 'Z' : r.rentedAt,
-            returnedAt: r.returnedAt && !r.returnedAt.endsWith('Z') ? r.returnedAt + 'Z' : r.returnedAt
+            ...r
         }));
 
         return NextResponse.json({ rentals: formattedRentals });
