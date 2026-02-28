@@ -23,6 +23,7 @@ export default function RentForm({
     const [phone3, setPhone3] = useState('');
     const [umbrellaId, setUmbrellaId] = useState('');
     const [isScanning, setIsScanning] = useState(false);
+    const [isManualInput, setIsManualInput] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -307,13 +308,34 @@ export default function RentForm({
                         </div>
                     </div>
 
-                    {/* QR Scanner */}
+                    {/* QR Scanner / Manual Input */}
                     <div className="space-y-4 pb-6">
-                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
-                            우산 QR 인식 <span className="text-[#ff5252] text-[10px]">●</span>
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                                우산 번호 입력 <span className="text-[#ff5252] text-[10px]">●</span>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsManualInput(!isManualInput);
+                                    if (isScanning) stopScanner();
+                                    if (!isManualInput) setUmbrellaId('');
+                                }}
+                                className="text-sm font-bold text-[#5400d3] hover:underline"
+                            >
+                                {isManualInput ? 'QR 코드로 스캔하기' : '직접 입력하기'}
+                            </button>
+                        </div>
 
-                        {umbrellaId ? (
+                        {isManualInput ? (
+                            <input
+                                type="number"
+                                placeholder="우산 번호를 숫자로 입력해주세요"
+                                value={umbrellaId}
+                                onChange={(e) => setUmbrellaId(e.target.value)}
+                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
+                            />
+                        ) : umbrellaId ? (
                             <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">스캔된 우산 번호</p>

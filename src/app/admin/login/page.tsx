@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
                 <CardHeader className="text-center">
                     <div className="text-4xl mb-2">☂️</div>
                     <CardTitle className="text-xl">관리자 로그인</CardTitle>
-                    <p className="text-sm text-gray-500">Umbrella Admin</p>
+                    <p className="text-sm text-gray-500">밝히는사람들 관리자 페이지</p>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -40,6 +40,17 @@ export async function POST(
 
         if (updateError) throw updateError;
 
+        // Delete all rental history associated with this booth
+        const { error: deleteError } = await supabase
+            .from('Rental')
+            .delete()
+            .eq('boothId', id);
+
+        if (deleteError) {
+            console.error('Failed to delete rentals for booth:', id, deleteError);
+            // We don't throw to not break the booth completion process, but log the error
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Complete booth error:', error);

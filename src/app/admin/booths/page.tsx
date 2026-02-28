@@ -189,7 +189,8 @@ export default function BoothsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     umbrellaStartNumber: Number(assignStart),
-                    umbrellaEndNumber: Number(assignEnd)
+                    umbrellaEndNumber: Number(assignEnd),
+                    isActive: true // Force reactivation on new assignment
                 }),
             });
 
@@ -295,9 +296,9 @@ export default function BoothsPage() {
                                     </div>
                                     <div className="absolute bottom-2 right-2 flex items-center gap-2">
                                         <Button
-                                            variant="secondary"
+                                            variant={(!booth.isActive && (!booth.umbrellaStartNumber || !booth.umbrellaEndNumber)) ? "default" : "secondary"}
                                             size="sm"
-                                            className="h-8 text-xs opacity-90 hover:opacity-100 bg-white/80 hover:bg-white text-gray-800"
+                                            className={`h-8 text-xs opacity-90 hover:opacity-100 ${(!booth.isActive && (!booth.umbrellaStartNumber || !booth.umbrellaEndNumber)) ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-white/80 hover:bg-white text-gray-800'}`}
                                             onClick={() => {
                                                 setAssignBooth(booth);
                                                 setAssignStart(booth.umbrellaStartNumber || '');
@@ -305,7 +306,7 @@ export default function BoothsPage() {
                                                 setAssignModalOpen(true);
                                             }}
                                         >
-                                            우산 배정
+                                            {(!booth.isActive && (!booth.umbrellaStartNumber || !booth.umbrellaEndNumber)) ? '행사 재시작' : '우산 배정'}
                                         </Button>
                                         {booth.umbrellaStartNumber && booth.umbrellaEndNumber && (
                                             <Button

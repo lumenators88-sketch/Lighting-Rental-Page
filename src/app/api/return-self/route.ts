@@ -24,9 +24,15 @@ export async function GET(request: Request) {
 
         if (error) throw error;
 
+        const formattedRentals = rentals?.map(r => ({
+            ...r,
+            rentedAt: r.rentedAt && !r.rentedAt.endsWith('Z') ? r.rentedAt + 'Z' : r.rentedAt,
+            returnedAt: r.returnedAt && !r.returnedAt.endsWith('Z') ? r.returnedAt + 'Z' : r.returnedAt
+        }));
+
         return NextResponse.json({
             success: true,
-            rentals: rentals || [],
+            rentals: formattedRentals || [],
         });
     } catch (error) {
         console.error('Self-return lookup error:', error);
@@ -80,6 +86,13 @@ export async function POST(request: Request) {
             .single();
 
         if (updateError) throw updateError;
+
+        if (updated.rentedAt && !updated.rentedAt.endsWith('Z')) {
+            updated.rentedAt += 'Z';
+        }
+        if (updated.returnedAt && !updated.returnedAt.endsWith('Z')) {
+            updated.returnedAt += 'Z';
+        }
 
         // Umbrella 상태를 AVAILABLE로 복구
         const umbrellaNumber = parseInt(rental.umbrellaId, 10);

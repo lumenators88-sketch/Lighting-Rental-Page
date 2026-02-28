@@ -99,6 +99,13 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
+        if (rental.rentedAt && !rental.rentedAt.endsWith('Z')) {
+            rental.rentedAt += 'Z';
+        }
+        if (rental.returnedAt && !rental.returnedAt.endsWith('Z')) {
+            rental.returnedAt += 'Z';
+        }
+
         // 3. Update Umbrella status to RENTED and assign to booth
         await supabase
             .from('Umbrella')

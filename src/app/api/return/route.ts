@@ -44,6 +44,13 @@ export async function POST(request: Request) {
 
         if (updateError) throw updateError;
 
+        if (updated.rentedAt && !updated.rentedAt.endsWith('Z')) {
+            updated.rentedAt += 'Z';
+        }
+        if (updated.returnedAt && !updated.returnedAt.endsWith('Z')) {
+            updated.returnedAt += 'Z';
+        }
+
         // Update Umbrella status back to AVAILABLE
         const umbrellaNumber = parseInt(umbrellaId, 10);
         if (!isNaN(umbrellaNumber)) {

@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, ArrowLeftRight, Store, LogOut } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Store, LogOut, Umbrella } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
@@ -41,39 +41,43 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
             {/* Sidebar */}
-            <aside className="w-full md:w-64 bg-white border-b md:border-r border-gray-200">
-                <div className="h-16 flex items-center px-6 border-b border-gray-200">
-                    <h1 className="text-xl font-bold tracking-tight text-gray-900">
-                        ☂️ Umbrella Admin
+            <aside className="w-full md:w-64 bg-slate-900 border-b md:border-r border-slate-800 flex flex-col md:min-h-screen">
+                <div className="h-16 flex items-center px-6 border-b border-slate-800 flex-shrink-0">
+                    <h1 className="flex items-center gap-2">
+                        <img
+                            src="/logo.png"
+                            alt="밝히는 사람들 로고"
+                            className="h-7 w-auto"
+                        />
                     </h1>
                 </div>
-                <nav className="p-4 space-y-1">
+                <nav className="p-4 space-y-2 flex-1">
                     <Link
                         href="/admin"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/admin' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${pathname === '/admin' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
                     >
                         <LayoutDashboard className="w-5 h-5" />
                         대시보드 (현황)
                     </Link>
                     <Link
                         href="/admin/return"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/admin/return' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${pathname === '/admin/return' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
                     >
-                        <ArrowLeftRight className="w-5 h-5 text-blue-600" />
-                        <span className="text-blue-600 font-semibold">반납 처리</span>
+                        <ArrowLeftRight className="w-5 h-5" />
+                        <span>반납 처리</span>
                     </Link>
                     <Link
                         href="/admin/booths"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/admin/booths' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${pathname === '/admin/booths' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
                     >
                         <Store className="w-5 h-5" />
                         행사 관리
                     </Link>
                 </nav>
-                <div className="p-4 border-t border-gray-200">
+                <div className="p-4 border-t border-slate-800">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors w-full text-sm"
+                        className="flex items-center gap-3 px-3 py-2 rounded-md text-slate-400 hover:bg-slate-800 hover:text-white transition-colors w-full text-sm"
                     >
                         <LogOut className="w-4 h-4" />
                         로그아웃
