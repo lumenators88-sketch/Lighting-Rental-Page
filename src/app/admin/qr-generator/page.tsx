@@ -135,19 +135,21 @@ export default function QRGeneratorPage() {
                                 }}
                             >
                                 <div 
-                                    className="text-center font-black font-mono leading-none" 
+                                    className="text-center font-black font-mono leading-none flex items-center justify-center" 
                                     style={{ 
-                                        fontSize: '32pt', 
+                                        fontSize: qrId.length === 1 || qrId.length === 2 ? '24pt' : '16pt', 
+                                        width: '10mm',
+                                        height: '7mm',
                                         marginBottom: '0.5mm',
-                                        letterSpacing: '-1.5px'
+                                        letterSpacing: '-1px'
                                     }}
                                 >
-                                    {qrId}
+                                    {qrId.length === 1 ? `0${qrId}` : qrId}
                                 </div>
-                                <div className="qr-container flex items-center justify-center" style={{ height: '7mm' }}>
+                                <div className="qr-container flex items-center justify-center" style={{ height: '10mm' }}>
                                     <QRCodeSVG 
                                         value={`${window.location.origin}/rent/${qrId}`} 
-                                        size={26} 
+                                        size={38} 
                                         level="M"
                                         includeMargin={false}
                                     />
