@@ -35,7 +35,7 @@ export default function RentForm({
     const [phone3, setPhone3] = useState('');
     const [umbrellaId, setUmbrellaId] = useState('');
     const [isScanning, setIsScanning] = useState(false);
-    const [isManualInput, setIsManualInput] = useState(false);
+    const [isManualInput, setIsManualInput] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [customData, setCustomData] = useState<Record<string, any>>({});
@@ -242,7 +242,7 @@ export default function RentForm({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <p className="text-white/80 text-sm font-medium mb-1">우산 대여</p>
+                    <p className="text-white/80 text-sm font-medium mb-1">별빛 우산 대여</p>
                     <h1 className="text-white text-2xl font-extrabold">{boothName}</h1>
                 </div>
             </div>
@@ -566,65 +566,67 @@ export default function RentForm({
                             <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
                                 우산 번호 입력 <span className="text-[#ff5252] text-[10px]">●</span>
                             </label>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsManualInput(!isManualInput);
-                                    if (isScanning) stopScanner();
-                                    if (!isManualInput) setUmbrellaId('');
-                                }}
-                                className="text-sm font-bold text-[#5400d3] hover:underline"
-                            >
-                                {isManualInput ? 'QR 코드로 스캔하기' : '직접 입력하기'}
-                            </button>
                         </div>
 
-                        {isManualInput ? (
-                            <input
-                                type="number"
-                                placeholder="우산 번호를 숫자로 입력해주세요"
-                                value={umbrellaId}
-                                onChange={(e) => setUmbrellaId(e.target.value)}
-                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
-                            />
-                        ) : umbrellaId ? (
-                            <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">스캔된 우산 번호</p>
-                                    <p className="font-mono font-bold text-xl text-[#5400d3]">{umbrellaId}</p>
+                        {/* Input Area */}
+                        <div className="relative">
+                            {isManualInput ? (
+                                <div className="space-y-4">
+                                    <input
+                                        type="number"
+                                        placeholder="우산 번호를 입력해주세요"
+                                        value={umbrellaId}
+                                        onChange={(e) => setUmbrellaId(e.target.value)}
+                                        className="w-full text-center py-5 rounded-[20px] border-2 border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-2xl outline-none font-bold text-[#5400d3] transition-all bg-white"
+                                    />
+                                    {!umbrellaId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsManualInput(false);
+                                                startScanner();
+                                            }}
+                                            className="w-full py-4 rounded-xl bg-[#5400d3]/5 text-[#5400d3] font-bold text-sm flex items-center justify-center gap-2 border border-[#5400d3]/10 hover:bg-[#5400d3]/10 transition-colors"
+                                        >
+                                            <Camera className="w-4 h-4" />
+                                            QR 코드로 스캔하기
+                                        </button>
+                                    )}
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setUmbrellaId('')}
-                                    className="text-gray-400 hover:text-gray-600 p-2"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <div id="qr-reader" className={`w-full rounded-xl overflow-hidden ${isScanning ? '' : 'hidden'}`} />
-                                {isScanning ? (
+                            ) : umbrellaId ? (
+                                <div className="bg-white p-5 rounded-[20px] shadow-sm border-2 border-[#5400d3] flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs text-gray-500 mb-1">인식된 우산 번호</p>
+                                        <p className="font-mono font-bold text-2xl text-[#5400d3]">{umbrellaId}</p>
+                                    </div>
                                     <button
                                         type="button"
-                                        onClick={stopScanner}
-                                        className="w-full py-4 rounded-xl bg-gray-200 text-gray-700 font-bold text-base flex items-center justify-center gap-2"
+                                        onClick={() => {
+                                            setUmbrellaId('');
+                                            setIsManualInput(true);
+                                        }}
+                                        className="bg-gray-100 text-gray-400 hover:text-gray-600 p-2 rounded-full transition-colors"
                                     >
                                         <X className="w-5 h-5" />
-                                        스캔 취소
                                     </button>
-                                ) : (
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div id="qr-reader" className="w-full rounded-[20px] overflow-hidden border-2 border-[#5400d3]/20 shadow-inner" />
                                     <button
                                         type="button"
-                                        onClick={startScanner}
-                                        className="w-full py-4 rounded-xl bg-[#5400d3] text-white font-bold text-base flex items-center justify-center gap-2 shadow-sm hover:bg-[#4500b0] transition-colors"
+                                        onClick={() => {
+                                            stopScanner();
+                                            setIsManualInput(true);
+                                        }}
+                                        className="w-full py-4 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-all"
                                     >
-                                        <Camera className="w-5 h-5" />
-                                        QR 코드 스캔하기
+                                        <X className="w-4 h-4" />
+                                        스캔 취소 후 직접 입력하기
                                     </button>
-                                )}
-                            </>
-                        )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Submit */}
@@ -634,43 +636,13 @@ export default function RentForm({
                             disabled={isSubmitting}
                             className="bg-[#FFEA00] text-gray-900 font-bold text-lg py-4 px-12 rounded-xl shadow-md w-48 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
                         >
-                            {isSubmitting ? '처리중...' : '작성'}
+                            {isSubmitting ? '처리중...' : '완료'}
                         </button>
                     </div>
                 </form>
             </div>
 
-            {/* Footer */}
-            <footer className="bg-black text-[#f5f5f5] px-8 py-12 text-[13px] font-light leading-[1.8] pb-36">
-                <div className="space-y-8">
-                    <div>
-                        <p className="font-semibold text-sm mb-2 text-white tracking-widest">밝히는 사람들</p>
-                        <p>사업자등록번호 689-29-01176</p>
-                        <p>부산광역시 사하구 두송로 188번길 43 1층</p>
-                        <p>통신판매업 신고번호 제2022-부산사하구-0853</p>
-                        <p>대표 위.동.영.</p>
-                    </div>
-                    <div>
-                        <p>고객센터 051 255 2080</p>
-                        <p>이메일 saramdle88@gmail.com</p>
-                        <p>팩스 051 255 2082</p>
-                    </div>
-                    <div className="pt-4 text-gray-400 border-t border-gray-800">
-                        <p className="mb-6">Copyright © 2026 밝히는 사람들 All rights reserved.</p>
-                        <div className="flex gap-4">
-                            <a href="#" className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-white hover:text-black transition-colors">
-                                <Instagram className="w-4 h-4" />
-                            </a>
-                            <a href="#" className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-white hover:text-black transition-colors">
-                                <Facebook className="w-4 h-4" />
-                            </a>
-                            <a href="#" className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-white hover:text-black transition-colors">
-                                <Youtube className="w-4 h-4" />
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
+
 
             {/* Floating Action Buttons */}
             <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">

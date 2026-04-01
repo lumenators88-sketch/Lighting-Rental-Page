@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { exportSingleSurveyToNotion } from '@/lib/notion';
+import { sendRentalNotification } from '@/lib/solapi';
 
 export async function POST(request: Request) {
     try {
@@ -126,6 +127,12 @@ export async function POST(request: Request) {
                 timestamp: new Date().toISOString()
             });
             exportSingleSurveyToNotion(booth.name, rental.rentedAt, customData, 'RENT').catch(console.error);
+        }
+        // 5. Send Alim-talk notification (background)
+        if (phone) {
+            sendRentalNotification(phone).catch((err: any) => {
+                console.error('[Rent API] Failed to send Alim-talk:', err);
+            });
         }
 
         return NextResponse.json({ success: true, rental });
