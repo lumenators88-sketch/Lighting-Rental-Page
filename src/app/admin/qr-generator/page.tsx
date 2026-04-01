@@ -134,23 +134,23 @@ export default function QRGeneratorPage() {
                                     pageBreakInside: 'avoid'
                                 }}
                             >
-                                <div className="qr-container flex items-center justify-center" style={{ height: '14mm' }}>
-                                    <QRCodeSVG 
-                                        value={`${window.location.origin}/rent/${qrId}`} 
-                                        size={45} // 12mm approx
-                                        level="M"
-                                        includeMargin={false}
-                                    />
-                                </div>
                                 <div 
-                                    className="text-center font-bold font-mono" 
+                                    className="text-center font-black font-mono leading-none" 
                                     style={{ 
-                                        fontSize: '8pt', 
-                                        lineHeight: '1',
-                                        marginTop: '1mm'
+                                        fontSize: '32pt', 
+                                        marginBottom: '0.5mm',
+                                        letterSpacing: '-1.5px'
                                     }}
                                 >
                                     {qrId}
+                                </div>
+                                <div className="qr-container flex items-center justify-center" style={{ height: '7mm' }}>
+                                    <QRCodeSVG 
+                                        value={`${window.location.origin}/rent/${qrId}`} 
+                                        size={26} 
+                                        level="M"
+                                        includeMargin={false}
+                                    />
                                 </div>
                             </div>
                         ))}
