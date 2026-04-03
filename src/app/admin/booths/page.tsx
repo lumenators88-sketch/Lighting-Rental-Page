@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
-import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X } from 'lucide-react';
+import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X, ShieldCheck } from 'lucide-react';
 import { Reorder } from 'framer-motion';
 
 type Booth = {
@@ -24,7 +24,7 @@ type FormField = {
     id: string;
     boothId: string;
     label: string;
-    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating';
+    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating' | 'privacy';
     options: string[] | null;
     required: boolean;
     fieldOrder: number;
@@ -39,6 +39,7 @@ const FIELD_TYPE_LABELS: Record<string, string> = {
     date: '날짜',
     number: '숫자',
     rating: '별점 (5점)',
+    privacy: '개인정보 동의',
 };
 
 const FIELD_TYPES = [
@@ -50,6 +51,7 @@ const FIELD_TYPES = [
     { id: 'date', label: '날짜', icon: Calendar },
     { id: 'rating', label: '별점', icon: Star },
     { id: 'image', label: '사진', icon: ImageIcon },
+    { id: 'privacy', label: '약관동의', icon: ShieldCheck },
 ];
 
 export default function BoothsPage() {
@@ -70,6 +72,7 @@ export default function BoothsPage() {
     const [createFieldRequired, setCreateFieldRequired] = useState(false);
     const [createFieldOptions, setCreateFieldOptions] = useState<string[]>([]);
     const [createOptionInput, setCreateOptionInput] = useState('');
+    const [createPrivacyCheckboxText, setCreatePrivacyCheckboxText] = useState('');
 
     // QR Modal State (simple inline)
     const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null);
@@ -91,6 +94,7 @@ export default function BoothsPage() {
     const [newFieldRequired, setNewFieldRequired] = useState(false);
     const [newFieldOptions, setNewFieldOptions] = useState<string[]>([]);
     const [optionInput, setOptionInput] = useState('');
+    const [privacyCheckboxText, setPrivacyCheckboxText] = useState('');
     const [isAddingField, setIsAddingField] = useState(false);
 
     const fetchBooths = async () => {
@@ -277,10 +281,18 @@ export default function BoothsPage() {
         }
 
         const needsOptions = newFieldType === 'select' || newFieldType === 'multi_select';
-        const parsedOptions = needsOptions ? newFieldOptions : null;
+        const isPrivacy = newFieldType === 'privacy';
+        const parsedOptions = isPrivacy 
+            ? [optionInput.trim(), privacyCheckboxText.trim() || '개인정보 수집 및 초상권 이용에 동의하시겠습니까?'] 
+            : (needsOptions ? newFieldOptions : null);
 
         if (needsOptions && (!parsedOptions || parsedOptions.length < 2)) {
             toast.error('선택형은 최소 2개 이상의 옵션을 추가해주세요.');
+            return;
+        }
+
+        if (isPrivacy && (!optionInput.trim())) {
+            toast.error('약관 내용을 입력해주세요.');
             return;
         }
 
@@ -334,10 +346,18 @@ export default function BoothsPage() {
         }
 
         const needsOptions = createFieldType === 'select' || createFieldType === 'multi_select';
-        const parsedOptions = needsOptions ? createFieldOptions : null;
+        const isPrivacy = createFieldType === 'privacy';
+        const parsedOptions = isPrivacy 
+            ? [createOptionInput.trim(), createPrivacyCheckboxText.trim() || '개인정보 수집 및 초상권 이용에 동의하시겠습니까?'] 
+            : (needsOptions ? createFieldOptions : null);
 
         if (needsOptions && (!parsedOptions || parsedOptions.length < 2)) {
             toast.error('선택형은 최소 2개 이상의 옵션을 추가해주세요.');
+            return;
+        }
+
+        if (isPrivacy && !createOptionInput.trim()) {
+            toast.error('약관 내용을 입력해주세요.');
             return;
         }
 
@@ -574,6 +594,30 @@ export default function BoothsPage() {
                                                     ))}
                                                 </div>
                                             )}
+                                        </div>
+                                    )}
+
+                                    {createFieldType === 'privacy' && (
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold">약관 내용 입력</Label>
+                                                <textarea
+                                                    placeholder="동의받을 약관 전문을 입력해주세요."
+                                                    value={createOptionInput}
+                                                    onChange={e => setCreateOptionInput(e.target.value)}
+                                                    rows={5}
+                                                    className="w-full py-3 px-4 rounded-xl bg-white border border-gray-200 focus:border-[hsl(264,100%,41%)] focus:ring-4 focus:ring-[hsl(264,100%,41%)]/10 shadow-sm text-sm outline-none font-medium text-gray-800 resize-none transition-all"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold">체크박스 동의 문구 (미입력 시 기본문구 노출)</Label>
+                                                <Input
+                                                    placeholder="예: 개인정보 수집 및 초상권 이용에 동의하시겠습니까?"
+                                                    value={createPrivacyCheckboxText}
+                                                    onChange={e => setCreatePrivacyCheckboxText(e.target.value)}
+                                                    className="h-10 rounded-xl bg-white focus-visible:ring-[hsl(264,100%,41%)]"
+                                                />
+                                            </div>
                                         </div>
                                     )}
 
@@ -873,7 +917,12 @@ export default function BoothsPage() {
                                                         return (
                                                             <div
                                                                 key={ft.id}
-                                                                onClick={() => setNewFieldType(ft.id as FormField['type'])}
+                                                                onClick={() => {
+                                                                    setNewFieldType(ft.id as FormField['type']);
+                                                                    setNewFieldOptions([]);
+                                                                    setOptionInput('');
+                                                                    setPrivacyCheckboxText('');
+                                                                }}
                                                                 className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-[hsl(264,100%,41%)] bg-[hsl(264,100%,41%)]/5 text-[hsl(264,100%,41%)]' : 'border-transparent bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
                                                             >
                                                                 <IconComponent className="w-5 h-5 mb-1.5" />
@@ -937,6 +986,30 @@ export default function BoothsPage() {
                                                             ))}
                                                         </div>
                                                     )}
+                                                </div>
+                                            )}
+
+                                            {newFieldType === 'privacy' && (
+                                                <div className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">약관 내용 입력</Label>
+                                                        <textarea
+                                                            placeholder="동의받을 약관 전문을 입력해주세요."
+                                                            value={optionInput}
+                                                            onChange={e => setOptionInput(e.target.value)}
+                                                            rows={5}
+                                                            className="w-full py-3 px-4 rounded-xl bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-[hsl(264,100%,41%)] shadow-sm text-sm outline-none font-medium text-gray-800 resize-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">체크박스 동의 문구 (미입력 시 기본문구 노출)</Label>
+                                                        <Input
+                                                            placeholder="예: 개인정보 수집 및 초상권 이용에 동의하시겠습니까?"
+                                                            value={privacyCheckboxText}
+                                                            onChange={e => setPrivacyCheckboxText(e.target.value)}
+                                                            className="h-11 rounded-xl bg-gray-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[hsl(264,100%,41%)] transition-all"
+                                                        />
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

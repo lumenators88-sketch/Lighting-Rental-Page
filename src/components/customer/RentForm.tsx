@@ -11,7 +11,7 @@ type FormField = {
     id: string;
     boothId: string;
     label: string;
-    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating';
+    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating' | 'privacy';
     options: string[] | null;
     required: boolean;
     fieldOrder: number;
@@ -160,6 +160,10 @@ export default function RentForm({
         for (const field of formFields) {
             if (field.required) {
                 const val = customData[field.id];
+                if (field.type === 'privacy' && !val) {
+                    toast.error(`"${field.label}" 항목에 동의해주세요.`);
+                    return;
+                }
                 if (val === undefined || val === '' || (Array.isArray(val) && val.length === 0)) {
                     toast.error(`"${field.label}" 항목을 입력해주세요.`);
                     return;
@@ -317,10 +321,10 @@ export default function RentForm({
             {/* Form Section */}
             <div className="bg-[#FDF3F8] px-6 py-12 space-y-10">
                 <form onSubmit={handleSubmit} className="space-y-10">
-                    {/* Custom Fields */}
-                    {formFields.length > 0 && (
+                    {/* Custom Fields (Exclude Privacy) */}
+                    {formFields.filter(f => f.type !== 'privacy').length > 0 && (
                         <div className="space-y-6">
-                            {formFields.map((field) => (
+                            {formFields.filter(f => f.type !== 'privacy').map((field) => (
                                 <div key={field.id} className="space-y-3">
                                     <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
                                         {field.label}
@@ -540,25 +544,46 @@ export default function RentForm({
                         </div>
                     </div>
 
-                    {/* Privacy */}
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
-                            개인정보 수집 및 이용 동의 <span className="text-[#ff5252] text-[10px]">●</span>
-                        </label>
-                        <div className="bg-white p-5 rounded-lg h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm">
-                            회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.<br /><br />
-                            <strong>제1조 (개인정보의 처리목적)</strong><br />
-                            회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
-                        </div>
-                        <div className="flex items-center gap-3 pt-2 pl-1 cursor-pointer" onClick={() => setPrivacyAgreed(!privacyAgreed)}>
-                            <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${privacyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
-                                {privacyAgreed && <span className="text-black text-sm font-bold">✓</span>}
+                    {/* Privacy (Custom or Default) */}
+                    {formFields.filter(f => f.type === 'privacy').length > 0 ? (
+                        formFields.filter(f => f.type === 'privacy').map((field) => (
+                            <div key={field.id} className="space-y-4">
+                                <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                                    {field.label} {field.required && <span className="text-[#ff5252] text-[10px]">●</span>}
+                                </label>
+                                <div className="bg-white p-5 rounded-[16px] h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm border border-gray-100/50 whitespace-pre-wrap">
+                                    {field.options?.[0]}
+                                </div>
+                                <div className="flex items-center gap-3 pt-2 pl-1 cursor-pointer" onClick={() => updateCustomField(field.id, !customData[field.id])}>
+                                    <div className={`w-6 h-6 rounded border flex items-center justify-center transition-all duration-200 ${customData[field.id] ? 'border-[#FFEA00] bg-[#FFEA00] shadow-sm' : 'border-gray-400 bg-white'}`}>
+                                        {customData[field.id] && <span className="text-black text-sm font-bold">✓</span>}
+                                    </div>
+                                    <label className="text-[15px] font-medium text-gray-800 cursor-pointer select-none">
+                                        개인정보 수집 및 초상권 이용에 동의하시겠습니까?
+                                    </label>
+                                </div>
                             </div>
-                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
-                                개인정보 수집 및 이용에 동의합니다.
+                        ))
+                    ) : (
+                        <div className="space-y-4">
+                            <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                                개인정보 수집 및 이용 동의 <span className="text-[#ff5252] text-[10px]">●</span>
                             </label>
+                            <div className="bg-white p-5 rounded-lg h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm border border-gray-100/50">
+                                회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.<br /><br />
+                                <strong>제1조 (개인정보의 처리목적)</strong><br />
+                                회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+                            </div>
+                            <div className="flex items-center gap-3 pt-2 pl-1 cursor-pointer" onClick={() => setPrivacyAgreed(!privacyAgreed)}>
+                                <div className={`w-6 h-6 rounded border flex items-center justify-center transition-all duration-200 ${privacyAgreed ? 'border-[#FFEA00] bg-[#FFEA00] shadow-sm' : 'border-gray-400 bg-white'}`}>
+                                    {privacyAgreed && <span className="text-black text-sm font-bold">✓</span>}
+                                </div>
+                                <label className="text-[15px] font-medium text-gray-800 cursor-pointer select-none">
+                                    개인정보 수집 및 초상권 이용에 동의하시겠습니까?
+                                </label>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* QR Scanner / Manual Input */}
                     <div className="space-y-4 pb-6">

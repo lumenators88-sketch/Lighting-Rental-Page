@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const validTypes = ['text', 'textarea', 'select', 'multi_select', 'image', 'date', 'number', 'rating'];
+        const validTypes = ['text', 'textarea', 'select', 'multi_select', 'image', 'date', 'number', 'rating', 'privacy'];
         if (!validTypes.includes(type)) {
             return NextResponse.json(
                 { error: `유효하지 않은 타입입니다. (${validTypes.join(', ')})` },
