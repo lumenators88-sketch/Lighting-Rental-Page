@@ -134,7 +134,7 @@ export async function POST(request: Request) {
             const cleanPhone = phone.replace(/[^0-9]/g, '');
             const nameSuffix = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
             
-            sendRentalNotification(phone, nameSuffix, umbrellaId).catch((err: any) => {
+            await sendRentalNotification(phone, nameSuffix, umbrellaId).catch((err: any) => {
                 console.error('[Rent API] Failed to send Alim-talk:', err);
             });
         }
