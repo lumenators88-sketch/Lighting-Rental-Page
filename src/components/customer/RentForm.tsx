@@ -203,6 +203,7 @@ export default function RentForm({
                 return;
             }
 
+            await new Promise(resolve => setTimeout(resolve, 3000));
             setIsSuccess(true);
             toast.success('대여가 완료되었습니다!');
             window.scrollTo({ top: 0, behavior: 'smooth' });
