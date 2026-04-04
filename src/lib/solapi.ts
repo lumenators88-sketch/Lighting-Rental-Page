@@ -19,10 +19,9 @@ export async function sendRentalNotification(phone: string, name: string, umbrel
         return;
     }
 
-    try {
-        // 하이픈 제거 및 숫자만 추출
-        const targetPhone = phone.replace(/[^0-9]/g, '');
+    const targetPhone = phone.replace(/[^0-9]/g, '');
 
+    try {
         const response = await messageService.send({
             to: targetPhone,
             from: process.env.SOLAPI_SENDER_NUMBER || '',

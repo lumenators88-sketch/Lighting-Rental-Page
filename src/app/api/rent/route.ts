@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { exportSingleSurveyToNotion } from '@/lib/notion';
 import { sendRentalNotification } from '@/lib/solapi';
@@ -134,8 +134,10 @@ export async function POST(request: Request) {
             const cleanPhone = phone.replace(/[^0-9]/g, '');
             const nameSuffix = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
             
-            await sendRentalNotification(phone, nameSuffix, umbrellaId).catch((err: any) => {
-                console.error('[Rent API] Failed to send Alim-talk:', err);
+            after(async () => {
+                await sendRentalNotification(phone, nameSuffix, umbrellaId).catch((err: any) => {
+                    console.error('[Rent API] Failed to send Alim-talk:', err);
+                });
             });
         }
 
