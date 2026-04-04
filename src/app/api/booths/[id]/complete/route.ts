@@ -22,10 +22,10 @@ export async function POST(
             );
         }
 
-        // Clear umbrella assignments for this booth
+        // Clear umbrella assignments for this booth and reset status to AVAILABLE
         await supabase
             .from('Umbrella')
-            .update({ currentBoothId: null, updatedAt: new Date().toISOString() })
+            .update({ currentBoothId: null, status: 'AVAILABLE', updatedAt: new Date().toISOString() })
             .eq('currentBoothId', id);
 
         // Reset booth umbrella range and deactivate

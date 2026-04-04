@@ -545,7 +545,7 @@ export default function RentForm({
                                         {customData[field.id] && <span className="text-black text-sm font-bold">✓</span>}
                                     </div>
                                     <label className="text-[15px] font-medium text-gray-800 cursor-pointer select-none">
-                                        개인정보 수집 및 초상권 이용에 동의하시겠습니까?
+                                        {field.options?.[1] || '개인정보 수집 및 초상권 이용에 동의하시겠습니까?'}
                                     </label>
                                 </div>
                             </div>

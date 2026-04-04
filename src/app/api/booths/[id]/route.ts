@@ -34,10 +34,10 @@ export async function PATCH(
                 .update({ currentBoothId: null, updatedAt: new Date().toISOString() })
                 .eq('currentBoothId', id);
 
-            // Assign new range to this booth
+            // Assign new range to this booth and reset status to AVAILABLE
             await supabase
                 .from('Umbrella')
-                .update({ currentBoothId: id, updatedAt: new Date().toISOString() })
+                .update({ currentBoothId: id, status: 'AVAILABLE', updatedAt: new Date().toISOString() })
                 .gte('umbrellaNumber', umbrellaStartNumber)
                 .lte('umbrellaNumber', umbrellaEndNumber);
         }
@@ -57,6 +57,12 @@ export async function DELETE(
 ) {
     try {
         const id = (await params).id;
+
+        // Reset all umbrellas assigned to this booth before deletion
+        await supabase
+            .from('Umbrella')
+            .update({ currentBoothId: null, status: 'AVAILABLE', updatedAt: new Date().toISOString() })
+            .eq('currentBoothId', id);
 
         const { error } = await supabase
             .from('Booth')

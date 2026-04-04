@@ -419,11 +419,33 @@ export default function BoothsPage() {
         }
     };
 
+    const handleResetAllUmbrellas = async () => {
+        if (!confirm('모든 우산을 AVAILABLE 상태로 초기화하시겠습니까?\n\n현재 대여 중인 우산도 포함됩니다.')) return;
+
+        try {
+            const res = await fetch('/api/umbrellas/reset-all', { method: 'POST' });
+            if (!res.ok) throw new Error('초기화 실패');
+            toast.success('모든 우산이 AVAILABLE 상태로 초기화되었습니다.');
+        } catch (err: any) {
+            toast.error(err.message || '초기화 중 오류가 발생했습니다.');
+        }
+    };
+
     return (
         <div className="space-y-8">
-            <div>
-                <h2 className="text-2xl font-bold tracking-tight">행사 관리</h2>
-                <p className="text-gray-500">행사를 등록하고 QR 코드를 발급받으세요.</p>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">행사 관리</h2>
+                    <p className="text-gray-500">행사를 등록하고 QR 코드를 발급받으세요.</p>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    onClick={handleResetAllUmbrellas}
+                >
+                    우산 전체 초기화
+                </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
