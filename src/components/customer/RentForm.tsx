@@ -670,20 +670,7 @@ export default function RentForm({
 
 
 
-            {/* Floating Action Buttons */}
-            <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
-                <a href="tel:051-255-2080" className="bg-[#FFE600] text-black w-[90px] h-[72px] rounded-[24px] shadow-2xl flex flex-col items-center justify-center hover:scale-105 transition-transform">
-                    <MessageCircle className="w-7 h-7 fill-black mb-1" />
-                    <span className="text-[12px] font-black tracking-tight">카톡상담</span>
-                </a>
-                <a href="tel:051-255-2080" className="bg-gray-500 text-white w-[110px] h-[64px] rounded-[20px] shadow-xl flex flex-col items-center justify-center hover:scale-105 transition-transform absolute right-0 top-[85px]">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                        <Headset className="w-4 h-4" />
-                        <span className="text-[12px] font-bold tracking-tight">상담문의</span>
-                    </div>
-                    <span className="text-[16px] font-black tracking-tighter">051 255 2080</span>
-                </a>
-            </div>
+
         </div>
     );
 }
