@@ -130,7 +130,11 @@ export async function POST(request: Request) {
         }
         // 5. Send Alim-talk notification (background)
         if (phone) {
-            sendRentalNotification(phone).catch((err: any) => {
+            // 휴대폰 번호의 마지막 4자리를 추출하여 이름 변수로 사용 (예: 5678)
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            const nameSuffix = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
+            
+            sendRentalNotification(phone, nameSuffix, umbrellaId).catch((err: any) => {
                 console.error('[Rent API] Failed to send Alim-talk:', err);
             });
         }

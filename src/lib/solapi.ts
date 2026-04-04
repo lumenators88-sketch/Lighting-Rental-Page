@@ -10,8 +10,10 @@ const messageService = new SolapiMessageService(apiKey, apiSecret);
 /**
  * 대여 완료 알림톡(카카오) 발송 함수
  * @param phone 수신자 휴대폰 번호
+ * @param name 수신자 이름 (뒷자리 4글자 등)
+ * @param umbrellaId 대여한 우산 번호
  */
-export async function sendRentalNotification(phone: string) {
+export async function sendRentalNotification(phone: string, name: string, umbrellaId: string) {
     if (!process.env.SOLAPI_API_KEY || !process.env.SOLAPI_TEMPLATE_ID) {
         console.warn('[Solapi] 연동 정보가 설정되지 않아 알림톡 발송을 스킵합니다.');
         return;
@@ -27,8 +29,10 @@ export async function sendRentalNotification(phone: string) {
             kakaoOptions: {
                 pfId: process.env.SOLAPI_PFID || '',
                 templateId: process.env.SOLAPI_TEMPLATE_ID || '',
-                // 변수가 없는 정적 템플릿의 경우 variables를 비워두거나 생략합니다.
-                variables: {}
+                variables: {
+                    name,
+                    umbrellaId
+                }
             }
         });
 

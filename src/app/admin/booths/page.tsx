@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
-import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X, ShieldCheck } from 'lucide-react';
+import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X, ShieldCheck, Download, QrCode, Printer } from 'lucide-react';
 import { Reorder } from 'framer-motion';
 
 type Booth = {
@@ -76,6 +76,7 @@ export default function BoothsPage() {
 
     // QR Modal State (simple inline)
     const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null);
+    const [selectedFormBooth, setSelectedFormBooth] = useState<Booth | null>(null);
 
     // Assign Modal State
     const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -718,8 +719,17 @@ export default function BoothsPage() {
                                                 <FileEdit className="w-3.5 h-3.5 mr-1" />
                                                 폼 편집
                                             </Button>
-                                            <Button variant="outline" size="sm" onClick={() => setSelectedBooth(booth)}>
+                                            <Button variant="outline" size="sm" onClick={() => {
+                                                setSelectedBooth(booth);
+                                                setSelectedFormBooth(null);
+                                            }}>
                                                 우산 QR
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => {
+                                                setSelectedFormBooth(booth);
+                                                setSelectedBooth(null);
+                                            }}>
+                                                폼 QR
                                             </Button>
                                         </div>
                                     </div>
@@ -830,6 +840,139 @@ export default function BoothsPage() {
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* Form QR Generator Area */}
+                    {selectedFormBooth && (
+                        <Card className="border-purple-200 mt-8">
+                            <CardHeader className="bg-purple-50">
+                                <CardTitle className="text-purple-800 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <QrCode className="w-5 h-5" />
+                                        <span>{selectedFormBooth.name} - 대여 폼 QR 코드</span>
+                                    </div>
+                                    <Button variant="ghost" size="sm" onClick={() => setSelectedFormBooth(null)}>
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-6">
+                                <p className="text-sm text-gray-600">
+                                    고객들이 대여 폼에 접속할 수 있는 전용 QR 코드입니다.<br />
+                                    이 QR 코드를 인쇄하여 부스 전면에 부착해주시면 됩니다.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-8 items-center bg-gray-50/50 p-8 rounded-2xl border border-dashed border-purple-100">
+                                    <div className="bg-white p-4 rounded-xl shadow-lg border border-purple-50" id="form-qr-container">
+                                        <QRCodeSVG
+                                            value={`${window.location.origin}/rent/booth?booth=${selectedFormBooth.id}`}
+                                            size={200}
+                                            level="H"
+                                            includeMargin={true}
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-4">
+                                        <div className="space-y-1">
+                                            <Label className="text-purple-700 font-bold">대여 폼 연결 주소</Label>
+                                            <div className="bg-white px-4 py-2 rounded-lg border text-sm font-mono text-gray-500 break-all">
+                                                {`${window.location.origin}/rent/booth?booth=${selectedFormBooth.id}`}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                className="flex-1 bg-purple-600 hover:bg-purple-700 font-bold"
+                                                onClick={() => {
+                                                    const svg = document.querySelector('#form-qr-container svg');
+                                                    if (!svg) return;
+                                                    const svgDataArr = new XMLSerializer().serializeToString(svg);
+                                                    const canvas = document.createElement('canvas');
+                                                    canvas.width = 1000; // High resolution
+                                                    canvas.height = 1000;
+                                                    const ctx = canvas.getContext('2d');
+                                                    const img = new Image();
+                                                    img.onload = () => {
+                                                        if (ctx) {
+                                                            ctx.fillStyle = "white";
+                                                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                                            ctx.drawImage(img, 0, 0, 1000, 1000);
+                                                            const pngFile = canvas.toDataURL("image/png");
+                                                            const downloadLink = document.createElement("a");
+                                                            downloadLink.download = `${selectedFormBooth.name}_대여폼_QR.png`;
+                                                            downloadLink.href = `${pngFile}`;
+                                                            downloadLink.click();
+                                                        }
+                                                    };
+                                                    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgDataArr)));
+                                                    toast.success('QR 코드가 저장되었습니다.');
+                                                }}
+                                            >
+                                                <Download className="w-4 h-4 mr-2" />
+                                                이미지 다운로드
+                                            </Button>
+                                            <Button
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 font-bold"
+                                                onClick={() => {
+                                                    const svg = document.querySelector('#form-qr-container svg');
+                                                    if (!svg) return;
+                                                    const svgData = new XMLSerializer().serializeToString(svg);
+                                                    const printWindow = window.open('', '_blank');
+                                                    if (!printWindow) return;
+                                                    
+                                                    printWindow.document.write(`
+                                                        <html>
+                                                            <head>
+                                                                <title>${selectedFormBooth.name} - 대여 폼 QR</title>
+                                                                <style>
+                                                                    @page { margin: 0; }
+                                                                    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+                                                                    .container { text-align: center; border: 1px solid #eee; padding: 40px; border-radius: 20px; }
+                                                                    h1 { margin-bottom: 20px; font-size: 24px; color: #333; }
+                                                                    .qr-wrapper { margin-bottom: 20px; }
+                                                                </style>
+                                                            </head>
+                                                            <body>
+                                                                <div class="container">
+                                                                    <h1>${selectedFormBooth.name} 대여 폼</h1>
+                                                                    <div class="qr-wrapper">${svgData}</div>
+                                                                </div>
+                                                                <script>
+                                                                    // Fix SVG size for print
+                                                                    const svg = document.querySelector('svg');
+                                                                    svg.setAttribute('width', '400');
+                                                                    svg.setAttribute('height', '400');
+                                                                    window.onload = () => {
+                                                                        window.print();
+                                                                        window.onafterprint = () => window.close();
+                                                                    };
+                                                                </script>
+                                                            </body>
+                                                        </html>
+                                                    `);
+                                                    printWindow.document.close();
+                                                }}
+                                            >
+                                                <Printer className="w-4 h-4 mr-2" />
+                                                QR 인쇄하기
+                                            </Button>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50"
+                                                onClick={() => {
+                                                    const url = `${window.location.origin}/rent/booth?booth=${selectedFormBooth.id}`;
+                                                    navigator.clipboard.writeText(url);
+                                                    toast.success('대여 폼 URL이 복사되었습니다!');
+                                                }}
+                                            >
+                                                <Copy className="w-4 h-4 mr-2" />
+                                                URL 복사
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Form Editor Modal */}
                     {formEditorOpen && formEditorBooth && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
