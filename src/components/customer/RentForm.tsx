@@ -139,7 +139,8 @@ export default function RentForm({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!privacyAgreed) {
+        const hasCustomPrivacy = formFields.some(f => f.type === 'privacy');
+        if (!hasCustomPrivacy && !privacyAgreed) {
             toast.error('개인정보 수집 및 이용에 동의해주세요.');
             return;
         }
@@ -529,21 +530,6 @@ export default function RentForm({
                         </div>
                     </div>
 
-                    {/* Safety Agree */}
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
-                            위의 안전수칙사항을 확인하셨나요? <span className="text-[#ff5252] text-[10px]">●</span>
-                        </label>
-                        <div className="flex items-center gap-3 pl-1 cursor-pointer" onClick={() => setSafetyAgreed(!safetyAgreed)}>
-                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${safetyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
-                                {safetyAgreed && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
-                            </div>
-                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
-                                네, 확인했습니다.
-                            </label>
-                        </div>
-                    </div>
-
                     {/* Privacy (Custom or Default) */}
                     {formFields.filter(f => f.type === 'privacy').length > 0 ? (
                         formFields.filter(f => f.type === 'privacy').map((field) => (
@@ -585,6 +571,21 @@ export default function RentForm({
                         </div>
                     )}
 
+                    {/* Safety Agree */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                            위의 안전수칙사항을 확인하셨나요? <span className="text-[#ff5252] text-[10px]">●</span>
+                        </label>
+                        <div className="flex items-center gap-3 pl-1 cursor-pointer" onClick={() => setSafetyAgreed(!safetyAgreed)}>
+                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${safetyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
+                                {safetyAgreed && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
+                            </div>
+                            <label className="text-[15px] text-gray-800 cursor-pointer select-none">
+                                네, 확인했습니다.
+                            </label>
+                        </div>
+                    </div>
+
                     {/* QR Scanner / Manual Input */}
                     <div className="space-y-4 pb-6">
                         <div className="flex items-center justify-between">
@@ -599,10 +600,10 @@ export default function RentForm({
                                 <div className="space-y-4">
                                     <input
                                         type="number"
-                                        placeholder="우산 번호를 입력해주세요"
+                                        placeholder="스태프에게 안내받은 번호를 입력해주세요."
                                         value={umbrellaId}
                                         onChange={(e) => setUmbrellaId(e.target.value)}
-                                        className="w-full text-center py-5 rounded-[20px] border-2 border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-2xl outline-none font-bold text-[#5400d3] transition-all bg-white"
+                                        className="w-full text-center py-5 rounded-[20px] border-2 border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-xl md:text-2xl placeholder:text-[15px] placeholder:font-medium outline-none font-bold text-[#5400d3] transition-all bg-white"
                                     />
                                     {!umbrellaId && (
                                         <button
