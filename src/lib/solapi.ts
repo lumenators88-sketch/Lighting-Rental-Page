@@ -30,8 +30,8 @@ export async function sendRentalNotification(phone: string, name: string, umbrel
                 pfId: process.env.SOLAPI_PFID || '',
                 templateId: process.env.SOLAPI_TEMPLATE_ID || '',
                 variables: {
-                    name,
-                    umbrellaId
+                    이름: name,
+                    우산번호: umbrellaId
                 }
             }
         });
