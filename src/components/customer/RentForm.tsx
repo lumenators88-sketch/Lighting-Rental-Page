@@ -610,7 +610,9 @@ export default function RentForm({
                                             type="button"
                                             onClick={() => {
                                                 setIsManualInput(false);
-                                                startScanner();
+                                                setTimeout(() => {
+                                                    startScanner();
+                                                }, 100);
                                             }}
                                             className="w-full py-4 rounded-xl bg-[#5400d3]/5 text-[#5400d3] font-bold text-sm flex items-center justify-center gap-2 border border-[#5400d3]/10 hover:bg-[#5400d3]/10 transition-colors"
                                         >
