@@ -10,6 +10,13 @@ export default function QuickReturnPage() {
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
+        const confirmed = window.confirm(`우산 ${umbrellaId}번을 반납 처리하시겠습니까?`);
+        if (!confirmed) {
+            setStatus('error');
+            setErrorMessage('반납이 취소되었습니다.');
+            return;
+        }
+
         const processReturn = async () => {
             try {
                 const res = await fetch('/api/return', {
