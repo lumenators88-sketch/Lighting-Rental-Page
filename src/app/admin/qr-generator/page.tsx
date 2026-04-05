@@ -11,6 +11,7 @@ export default function QRGeneratorPage() {
     const [startNum, setStartNum] = useState('');
     const [endNum, setEndNum] = useState('');
     const [qrList, setQrList] = useState<string[]>([]);
+    const [mode, setMode] = useState<'rent' | 'return'>('rent');
     const printRef = useRef<HTMLDivElement>(null);
 
     const handleSingleGenerate = () => {
@@ -22,12 +23,17 @@ export default function QRGeneratorPage() {
         const start = parseInt(startNum);
         const end = parseInt(endNum);
         if (isNaN(start) || isNaN(end) || start > end) return;
-        
+
         const list = [];
         for (let i = start; i <= end; i++) {
             list.push(String(i));
         }
         setQrList(list);
+    };
+
+    const getQrUrl = (qrId: string) => {
+        const path = mode === 'rent' ? `/rent/${qrId}` : `/return/${qrId}`;
+        return `${window.location.origin}${path}`;
     };
 
     const handlePrint = () => {
@@ -47,6 +53,22 @@ export default function QRGeneratorPage() {
             <div className="print:hidden space-y-2">
                 <h1 className="text-3xl font-extrabold text-gray-900">QR 생성기</h1>
                 <p className="text-gray-500 text-sm">우산에 부탁할 QR 라벨을 생성하고 인쇄할 수 있습니다. (30x20mm 규격)</p>
+            </div>
+
+            {/* Mode Toggle - Hidden on Print */}
+            <div className="print:hidden flex gap-2">
+                <Button
+                    variant={mode === 'rent' ? 'default' : 'outline'}
+                    onClick={() => { setMode('rent'); setQrList([]); }}
+                >
+                    대여용 QR
+                </Button>
+                <Button
+                    variant={mode === 'return' ? 'default' : 'outline'}
+                    onClick={() => { setMode('return'); setQrList([]); }}
+                >
+                    반납용 QR
+                </Button>
             </div>
 
             {/* Controls - Hidden on Print */}
@@ -123,8 +145,8 @@ export default function QRGeneratorPage() {
                                 key={qrId}
                                 className="label-item print:border-black flex flex-col items-center justify-center bg-white border border-gray-200"
                                 style={{
-                                    width: '30mm',
-                                    height: '20mm',
+                                    width: '40mm',
+                                    height: '30mm',
                                     padding: '1mm',
                                     boxSizing: 'border-box',
                                     display: 'flex',
@@ -134,10 +156,10 @@ export default function QRGeneratorPage() {
                                     pageBreakInside: 'avoid'
                                 }}
                             >
-                                <div 
-                                    className="text-center font-black font-mono leading-none flex items-center justify-center" 
-                                    style={{ 
-                                        fontSize: qrId.length === 1 || qrId.length === 2 ? '24pt' : '16pt', 
+                                <div
+                                    className="text-center font-black font-mono leading-none flex items-center justify-center"
+                                    style={{
+                                        fontSize: qrId.length === 1 || qrId.length === 2 ? '24pt' : '16pt',
                                         width: '10mm',
                                         height: '7mm',
                                         marginBottom: '0.5mm',
@@ -146,12 +168,12 @@ export default function QRGeneratorPage() {
                                 >
                                     {qrId.length === 1 ? `0${qrId}` : qrId}
                                 </div>
-                                <div className="qr-container flex items-center justify-center" style={{ height: '10mm' }}>
-                                    <QRCodeSVG 
-                                        value={`${window.location.origin}/rent/${qrId}`} 
-                                        size={38} 
-                                        level="M"
-                                        includeMargin={false}
+                                <div className="qr-container flex items-center justify-center" style={{ height: '20mm' }}>
+                                    <QRCodeSVG
+                                        value={getQrUrl(qrId)}
+                                        size={76}
+                                        level="H"
+                                        marginSize={2}
                                     />
                                 </div>
                             </div>
