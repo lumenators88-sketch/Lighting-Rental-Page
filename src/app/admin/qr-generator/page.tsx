@@ -11,7 +11,6 @@ export default function QRGeneratorPage() {
     const [startNum, setStartNum] = useState('');
     const [endNum, setEndNum] = useState('');
     const [qrList, setQrList] = useState<string[]>([]);
-    const [mode, setMode] = useState<'rent' | 'return'>('rent');
     const printRef = useRef<HTMLDivElement>(null);
 
     const handleSingleGenerate = () => {
@@ -32,8 +31,7 @@ export default function QRGeneratorPage() {
     };
 
     const getQrUrl = (qrId: string) => {
-        const path = mode === 'rent' ? `/rent/${qrId}` : `/return/${qrId}`;
-        return `${window.location.origin}${path}`;
+        return `${window.location.origin}/return/${qrId}`;
     };
 
     const handlePrint = () => {
@@ -53,22 +51,6 @@ export default function QRGeneratorPage() {
             <div className="print:hidden space-y-2">
                 <h1 className="text-3xl font-extrabold text-gray-900">QR 생성기</h1>
                 <p className="text-gray-500 text-sm">우산에 부탁할 QR 라벨을 생성하고 인쇄할 수 있습니다. (30x20mm 규격)</p>
-            </div>
-
-            {/* Mode Toggle - Hidden on Print */}
-            <div className="print:hidden flex gap-2">
-                <Button
-                    variant={mode === 'rent' ? 'default' : 'outline'}
-                    onClick={() => { setMode('rent'); setQrList([]); }}
-                >
-                    대여용 QR
-                </Button>
-                <Button
-                    variant={mode === 'return' ? 'default' : 'outline'}
-                    onClick={() => { setMode('return'); setQrList([]); }}
-                >
-                    반납용 QR
-                </Button>
             </div>
 
             {/* Controls - Hidden on Print */}
