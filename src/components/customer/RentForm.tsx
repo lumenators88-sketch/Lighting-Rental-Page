@@ -112,7 +112,8 @@ export default function RentForm({
                 () => { } // ignore scan errors
             );
         } catch (err) {
-            toast.error('카메라를 사용할 수 없습니다. 카메라 권한을 확인해주세요.');
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            toast.error(`카메라를 사용할 수 없습니다. (${errorMessage})`);
             setIsScanning(false);
         }
     };
