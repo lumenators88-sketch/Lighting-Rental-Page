@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Thermometer, Grid3X3, Users, AlertTriangle, Headset, MessageCircle, Instagram, Facebook, Youtube, Camera, X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Html5Qrcode } from 'html5-qrcode';
+import QrScanner from 'qr-scanner';
 
 type FormField = {
     id: string;
@@ -40,7 +40,7 @@ export default function RentForm({
     const [isSuccess, setIsSuccess] = useState(false);
     const [customData, setCustomData] = useState<Record<string, any>>({});
     const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
-    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const scannerRef = useRef<QrScanner | null>(null);
     const router = useRouter();
 
     const updateCustomField = (fieldId: string, value: any) => {
@@ -98,19 +98,23 @@ export default function RentForm({
     const startScanner = async () => {
         setIsScanning(true);
         try {
-            const scanner = new Html5Qrcode('qr-reader');
-            scannerRef.current = scanner;
-            await scanner.start(
-                { facingMode: 'environment' },
-                { fps: 30, qrbox: { width: 350, height: 350 } },
-                (decodedText) => {
-                    const id = extractUmbrellaId(decodedText);
+            const videoEl = document.getElementById('qr-video') as HTMLVideoElement;
+            const scanner = new QrScanner(
+                videoEl,
+                (result) => {
+                    const id = extractUmbrellaId(result.data);
                     setUmbrellaId(id);
                     stopScanner();
                     toast.success(`우산 번호 인식: ${id}`);
                 },
-                () => { } // ignore scan errors
+                {
+                    preferredCamera: 'environment',
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                }
             );
+            scannerRef.current = scanner;
+            await scanner.start();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             toast.error(`카메라를 사용할 수 없습니다. (${errorMessage})`);
@@ -118,12 +122,10 @@ export default function RentForm({
         }
     };
 
-    const stopScanner = async () => {
+    const stopScanner = () => {
         if (scannerRef.current) {
-            try {
-                await scannerRef.current.stop();
-                scannerRef.current.clear();
-            } catch { }
+            scannerRef.current.stop();
+            scannerRef.current.destroy();
             scannerRef.current = null;
         }
         setIsScanning(false);
@@ -132,7 +134,8 @@ export default function RentForm({
     useEffect(() => {
         return () => {
             if (scannerRef.current) {
-                scannerRef.current.stop().catch(() => { });
+                scannerRef.current.stop();
+                scannerRef.current.destroy();
             }
         };
     }, []);
@@ -640,7 +643,7 @@ export default function RentForm({
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div id="qr-reader" className="w-full rounded-[20px] overflow-hidden border-2 border-[#5400d3]/20 shadow-inner" />
+                                    <video id="qr-video" className="w-full rounded-[20px] overflow-hidden border-2 border-[#5400d3]/20 shadow-inner" />
                                     <button
                                         type="button"
                                         onClick={() => {
