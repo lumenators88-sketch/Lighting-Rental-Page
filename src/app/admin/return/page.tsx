@@ -22,6 +22,7 @@ export default function AdminReturnPage() {
     const [lastReturned, setLastReturned] = useState<RentalResponse | null>(null);
     const [mode, setMode] = useState<'input' | 'qr'>('input');
     const [isScanning, setIsScanning] = useState(false);
+    const [errorModal, setErrorModal] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
@@ -75,7 +76,11 @@ export default function AdminReturnPage() {
             const data = await res.json();
 
             if (!res.ok) {
-                toast.error(data.error || '반납 처리에 실패했습니다.');
+                setErrorModal(data.error || '반납 처리에 실패했습니다.');
+                setTimeout(() => {
+                    setErrorModal('');
+                    setTimeout(() => inputRef.current?.focus(), 100);
+                }, 1000);
             } else {
                 toast.success(`반납 완료: ${targetId}`);
                 setLastReturned(data.rental);
@@ -137,6 +142,17 @@ export default function AdminReturnPage() {
 
     return (
         <div className="max-w-2xl mx-auto space-y-8">
+            {/* 에러 모달 */}
+            {errorModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center space-y-6 shadow-2xl">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                            <span className="text-3xl">⚠️</span>
+                        </div>
+                        <p className="text-lg font-bold text-gray-900">{errorModal}</p>
+                    </div>
+                </div>
+            )}
             <div>
                 <h2 className="text-2xl font-bold tracking-tight mb-2">우산 반납 처리</h2>
                 <p className="text-gray-500">

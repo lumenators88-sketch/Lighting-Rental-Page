@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
         if (fetchError || !rental) {
             return NextResponse.json(
-                { error: 'No active rental found for this umbrella' },
+                { error: '이미 반납처리 완료된 우산입니다.' },
                 { status: 404 }
             );
         }
