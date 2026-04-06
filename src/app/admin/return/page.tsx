@@ -20,7 +20,7 @@ export default function AdminReturnPage() {
     const [umbrellaId, setUmbrellaId] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [lastReturned, setLastReturned] = useState<RentalResponse | null>(null);
-    const [mode, setMode] = useState<'input' | 'qr'>('qr');
+    const [mode, setMode] = useState<'input' | 'qr'>('input');
     const [isScanning, setIsScanning] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);

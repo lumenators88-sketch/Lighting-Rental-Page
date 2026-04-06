@@ -17,6 +17,7 @@ function BarcodeLabel({ value }: { value: string }) {
                 height: 40,
                 displayValue: true,
                 fontSize: 36,
+                fontOptions: 'bold',
                 margin: 4,
             });
         }
