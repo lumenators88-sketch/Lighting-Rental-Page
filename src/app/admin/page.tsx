@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { COUNTRIES } from '@/lib/countries';
 
 type Rental = {
     id: string;
@@ -17,6 +18,25 @@ type Rental = {
     status: 'RENTED' | 'RETURNED';
     boothId: string;
     booth: { name: string };
+    customData?: Record<string, string>;
+};
+
+const nameToCountry = Object.fromEntries(COUNTRIES.map(c => [c.name, c]));
+
+const getFlagEmoji = (code: string) => {
+    if (!code || code === 'OTHER') return '🌐';
+    return String.fromCodePoint(...code.split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+};
+
+const getNationality = (customData?: Record<string, string>) => {
+    if (!customData) return null;
+    const val = Object.values(customData).find(v => nameToCountry[v]);
+    if (!val) return null;
+    const country = nameToCountry[val];
+    const flag = getFlagEmoji(country.code);
+    const match = val.match(/\(([^)]+)\)/);
+    const label = match ? match[1] : val;
+    return { flag, label, dial: country.dial };
 };
 
 type Booth = {
@@ -234,6 +254,7 @@ export default function AdminDashboard() {
                             <TableRow>
                                 <TableHead>상태</TableHead>
                                 <TableHead>우산 번호</TableHead>
+                                <TableHead>국적</TableHead>
                                 <TableHead>전화번호</TableHead>
                                 <TableHead>대여 행사</TableHead>
                                 <TableHead>대여 시각</TableHead>
@@ -271,6 +292,18 @@ export default function AdminDashboard() {
                                                     onChange={e => setEditForm(prev => prev ? { ...prev, umbrellaId: e.target.value } : null)}
                                                 />
                                             ) : r.umbrellaId}
+                                        </TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                const nat = getNationality(r.customData);
+                                                return nat ? (
+                                                    <span className="flex items-center gap-1 text-sm">
+                                                        <span>{nat.flag}</span>
+                                                        <span>{nat.label}</span>
+                                                        {nat.dial && <span className="text-gray-600 text-xs font-medium">{nat.dial}</span>}
+                                                    </span>
+                                                ) : <span className="text-gray-400 text-sm">-</span>;
+                                            })()}
                                         </TableCell>
                                         <TableCell>
                                             {isEditing ? (
