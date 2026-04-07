@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
-import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X, ShieldCheck, Download, QrCode, Printer } from 'lucide-react';
+import { ExternalLink, Copy, Link, FileEdit, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Type, AlignLeft, CircleDot, CheckSquare, Image as ImageIcon, Calendar, Hash, Star, X, ShieldCheck, Download, QrCode, Printer, Globe } from 'lucide-react';
 import { Reorder } from 'framer-motion';
 
 type Booth = {
@@ -24,7 +24,7 @@ type FormField = {
     id: string;
     boothId: string;
     label: string;
-    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating' | 'privacy';
+    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating' | 'privacy' | 'nationality';
     options: string[] | null;
     required: boolean;
     fieldOrder: number;
@@ -40,6 +40,7 @@ const FIELD_TYPE_LABELS: Record<string, string> = {
     number: '숫자',
     rating: '별점 (5점)',
     privacy: '개인정보 동의',
+    nationality: '국적',
 };
 
 const FIELD_TYPES = [
@@ -52,6 +53,7 @@ const FIELD_TYPES = [
     { id: 'rating', label: '별점', icon: Star },
     { id: 'image', label: '사진', icon: ImageIcon },
     { id: 'privacy', label: '약관동의', icon: ShieldCheck },
+    { id: 'nationality', label: '국적', icon: Globe },
 ];
 
 export default function BoothsPage() {

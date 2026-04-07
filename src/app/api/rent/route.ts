@@ -6,7 +6,7 @@ import { sendRentalNotification } from '@/lib/solapi';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { umbrellaId, phone, boothId, customData } = body;
+        const { umbrellaId, phone, boothId, customData, nationality } = body;
 
         if (!umbrellaId || !phone || !boothId) {
             console.log("Rent API 400: Missing required fields", { umbrellaId, phone, boothId });
@@ -128,12 +128,11 @@ export async function POST(request: Request) {
             });
             exportSingleSurveyToNotion(booth.name, rental.rentedAt, customData, 'RENT').catch(console.error);
         }
-        // 5. Send Alim-talk notification (background)
-        if (phone) {
-            // 휴대폰 번호의 마지막 4자리를 추출하여 이름 변수로 사용 (예: 5678)
+        // 5. Send Alim-talk notification (한국 국적만)
+        const isKorean = !nationality || nationality === 'South Korea (대한민국)';
+        if (phone && isKorean) {
             const cleanPhone = phone.replace(/[^0-9]/g, '');
             const nameSuffix = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
-            
             await sendRentalNotification(phone, nameSuffix, umbrellaId).catch((err: any) => {
                 console.error('[Rent API] Failed to send Alim-talk:', err);
             });

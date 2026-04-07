@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Edit2, Check, X } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Rental = {
@@ -33,6 +33,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'ALL' | 'RENTED' | 'RETURNED'>('ALL');
     const [boothFilter, setBoothFilter] = useState<'ALL' | string>('ALL');
+    const [showStats, setShowStats] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<{ umbrellaId: string, phone: string, status: 'RENTED' | 'RETURNED' } | null>(null);
 
@@ -174,7 +175,8 @@ export default function AdminDashboard() {
                 )}
             </div>
 
-            <div className="flex gap-2 pt-4">
+
+            <div className="flex gap-2">
                 <Button
                     variant={filter === 'ALL' ? 'default' : 'outline'}
                     onClick={() => setFilter('ALL')}
@@ -196,8 +198,32 @@ export default function AdminDashboard() {
                 >
                     반납 완료
                 </Button>
+                <Button
+                    variant={showStats ? 'default' : 'outline'}
+                    onClick={() => setShowStats(v => !v)}
+                    size="sm"
+                >
+                    통계
+                </Button>
             </div>
 
+            {showStats ? (() => {
+                const base = boothFilter === 'ALL'
+                    ? rentals.filter(r => activeBoothIds.includes(r.boothId))
+                    : rentals.filter(r => r.boothId === boothFilter);
+                const total = base.length;
+                const rented = base.filter(r => r.status === 'RENTED').length;
+                const returned = base.filter(r => r.status === 'RETURNED').length;
+                const rate = total > 0 ? Math.round((returned / total) * 100) : 0;
+                return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">총 대여</p><p className="text-2xl font-extrabold text-blue-600">{total}<span className="text-sm font-medium text-gray-500 ml-1">건</span></p></CardContent></Card>
+                        <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">현재 대여 중</p><p className="text-2xl font-extrabold text-red-500">{rented}<span className="text-sm font-medium text-gray-500 ml-1">건</span></p></CardContent></Card>
+                        <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">반납 완료</p><p className="text-2xl font-extrabold text-green-600">{returned}<span className="text-sm font-medium text-gray-500 ml-1">건</span></p></CardContent></Card>
+                        <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">반납률</p><p className="text-2xl font-extrabold text-purple-600">{rate}<span className="text-sm font-medium text-gray-500 ml-1">%</span></p></CardContent></Card>
+                    </div>
+                );
+            })() : (
             <Card>
                 <CardHeader>
                     <CardTitle>최근 기록</CardTitle>
@@ -291,6 +317,7 @@ export default function AdminDashboard() {
                     </Table>
                 </CardContent>
             </Card>
+            )}
         </div>
     );
 }

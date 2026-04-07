@@ -1,17 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Thermometer, Grid3X3, Users, AlertTriangle, Headset, MessageCircle, Instagram, Facebook, Youtube, Camera, X, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import QrScanner from 'qr-scanner';
+import { Thermometer, Grid3X3, Users, AlertTriangle, X, Upload } from 'lucide-react';
+import { COUNTRIES } from '@/lib/countries';
 
 type FormField = {
     id: string;
     boothId: string;
     label: string;
-    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating' | 'privacy';
+    type: 'text' | 'textarea' | 'select' | 'multi_select' | 'image' | 'date' | 'number' | 'rating' | 'privacy' | 'nationality';
     options: string[] | null;
     required: boolean;
     fieldOrder: number;
@@ -30,18 +28,27 @@ export default function RentForm({
 }) {
     const [privacyAgreed, setPrivacyAgreed] = useState(false);
     const [safetyAgreed, setSafetyAgreed] = useState(false);
-    const [phone1, setPhone1] = useState('010');
-    const [phone2, setPhone2] = useState('');
-    const [phone3, setPhone3] = useState('');
+    const [phoneInput, setPhoneInput] = useState('');
     const [umbrellaId, setUmbrellaId] = useState('');
-    const [isScanning, setIsScanning] = useState(false);
-    const [isManualInput, setIsManualInput] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
+
     const [customData, setCustomData] = useState<Record<string, any>>({});
     const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
-    const scannerRef = useRef<QrScanner | null>(null);
-    const router = useRouter();
+
+
+    useEffect(() => {
+        setCustomData(prev => {
+            const next = { ...prev };
+            let changed = false;
+            formFields.forEach(f => {
+                if (f.type === 'nationality' && next[f.id] === undefined) {
+                    next[f.id] = 'South Korea (대한민국)';
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, [formFields]);
 
     const updateCustomField = (fieldId: string, value: any) => {
         setCustomData(prev => ({ ...prev, [fieldId]: value }));
@@ -81,66 +88,9 @@ export default function RentForm({
         });
     };
 
-    const extractUmbrellaId = (value: string): string => {
-        try {
-            const url = new URL(value);
-            const pathParts = url.pathname.split('/').filter(Boolean);
-            // URL 형식: /rent/UB-10023?booth=xxx → pathParts = ['rent', 'UB-10023']
-            if (pathParts.length >= 2 && pathParts[0] === 'rent') {
-                return pathParts[1];
-            }
-        } catch {
-            // URL이 아닌 경우 그대로 반환
-        }
-        return value;
-    };
 
-    const startScanner = async () => {
-        setIsScanning(true);
-        try {
-            const videoEl = document.getElementById('qr-video') as HTMLVideoElement;
-            const scanner = new QrScanner(
-                videoEl,
-                (result) => {
-                    const id = extractUmbrellaId(result.data);
-                    setUmbrellaId(id);
-                    stopScanner();
-                    toast.success(`우산 번호 인식: ${id}`);
-                },
-                {
-                    preferredCamera: 'environment',
-                    highlightScanRegion: true,
-                    highlightCodeOutline: true,
-                }
-            );
-            scannerRef.current = scanner;
-            await scanner.start();
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            toast.error(`카메라를 사용할 수 없습니다. (${errorMessage})`);
-            setIsScanning(false);
-        }
-    };
 
-    const stopScanner = () => {
-        if (scannerRef.current) {
-            scannerRef.current.stop();
-            scannerRef.current.destroy();
-            scannerRef.current = null;
-        }
-        setIsScanning(false);
-    };
-
-    useEffect(() => {
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.stop();
-                scannerRef.current.destroy();
-            }
-        };
-    }, []);
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         const hasCustomPrivacy = formFields.some(f => f.type === 'privacy');
@@ -152,8 +102,8 @@ export default function RentForm({
             toast.error('안전수칙사항 확인에 동의해주세요.');
             return;
         }
-        if (phone2.length < 3 || phone3.length < 4) {
-            toast.error('올바른 휴대전화 번호를 입력해주세요.');
+        if (phoneInput.trim().length < 5) {
+            toast.error('올바른 연락처를 입력해주세요.');
             return;
         }
         if (!umbrellaId) {
@@ -178,13 +128,17 @@ export default function RentForm({
 
         // customData를 label 기반으로 변환 (저장용)
         const labeledCustomData: Record<string, any> = {};
+        let nationality: string | undefined;
         for (const field of formFields) {
             if (customData[field.id] !== undefined && customData[field.id] !== '') {
                 labeledCustomData[field.label] = customData[field.id];
             }
+            if (field.type === 'nationality') {
+                nationality = customData[field.id] || 'South Korea (대한민국)';
+            }
         }
 
-        const phone = `${phone1}-${phone2}-${phone3}`;
+        const phone = phoneInput.trim();
 
         setIsSubmitting(true);
         try {
@@ -195,6 +149,7 @@ export default function RentForm({
                     umbrellaId,
                     phone,
                     boothId,
+                    nationality,
                     customData: Object.keys(labeledCustomData).length > 0 ? labeledCustomData : undefined,
                 }),
             });
@@ -215,29 +170,6 @@ export default function RentForm({
         }
     };
 
-    if (isSuccess) {
-        return (
-            <div className="w-full max-w-md mx-auto bg-white min-h-screen relative shadow-2xl flex flex-col items-center justify-center p-8 space-y-6">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-4xl">☂️</span>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900">대여가 완료되었습니다!</h2>
-                <div className="w-full bg-gray-50 p-6 rounded-xl space-y-4 border border-gray-100">
-                    <div>
-                        <p className="text-sm text-gray-500 mb-1">대여 장소</p>
-                        <p className="font-bold text-lg text-gray-900">{boothName}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 mb-1">우산 번호</p>
-                        <p className="font-mono font-bold text-xl text-blue-600">{umbrellaId}</p>
-                    </div>
-                </div>
-                <Button className="w-full h-14 text-lg mt-8 rounded-xl" onClick={() => router.push('/')}>
-                    처음으로 돌아가기
-                </Button>
-            </div>
-        );
-    }
 
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen relative shadow-2xl pb-safe">
@@ -330,24 +262,52 @@ export default function RentForm({
                         <div className="space-y-6">
                             {formFields.filter(f => f.type !== 'privacy').map((field) => (
                                 <div key={field.id} className="space-y-3">
-                                    <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
-                                        {field.label}
-                                        {field.required && <span className="text-[#ff5252] text-[10px]">●</span>}
+                                    <label className="flex flex-col gap-0.5">
+                                        <span className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
+                                            {field.label}
+                                            {field.required && <span className="text-[#ff5252] text-[10px]">●</span>}
+                                        </span>
+                                        {field.type === 'nationality' && <span className="text-[13px] text-gray-500">Nationality</span>}
+                                        {(field.type === 'text' || field.type === 'textarea' || field.type === 'number') && (
+                                            <span className="text-[13px] text-gray-500">Please fill in your {field.label === '이름' || field.label === '성함' ? 'name' : field.label === '이메일' ? 'email' : field.label === '소속' ? 'organization' : field.label === '직업' ? 'occupation' : 'answer'}</span>
+                                        )}
+                                        {field.type === 'select' && <span className="text-[13px] text-gray-500">Please select an option</span>}
+                                        {field.type === 'multi_select' && <span className="text-[13px] text-gray-500">Please select all that apply</span>}
+                                        {field.type === 'rating' && <span className="text-[13px] text-gray-500">Please rate</span>}
+                                        {field.type === 'date' && <span className="text-[13px] text-gray-500">Please select a date</span>}
+                                        {field.type === 'image' && <span className="text-[13px] text-gray-500">Please upload a photo</span>}
                                     </label>
 
                                     {field.type === 'text' && (
                                         <input
                                             type="text"
-                                            placeholder={`${field.label}을(를) 입력해주세요`}
+                                            placeholder={`${field.label} / Please enter`}
                                             value={customData[field.id] || ''}
                                             onChange={(e) => updateCustomField(field.id, e.target.value)}
                                             className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 transition-all"
                                         />
                                     )}
 
+                                    {field.type === 'nationality' && (
+                                        <div className="relative">
+                                            <select
+                                                value={customData[field.id] || 'South Korea (대한민국)'}
+                                                onChange={(e) => updateCustomField(field.id, e.target.value)}
+                                                className="w-full py-4 px-5 pr-10 appearance-none rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-[hsl(264,100%,41%)] transition-all font-bold"
+                                            >
+                                                {COUNTRIES.map(c => (
+                                                    <option key={c.code} value={c.name}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {field.type === 'textarea' && (
                                         <textarea
-                                            placeholder={`${field.label}을(를) 입력해주세요`}
+                                            placeholder={`${field.label} / Please enter`}
                                             value={customData[field.id] || ''}
                                             onChange={(e) => updateCustomField(field.id, e.target.value)}
                                             rows={4}
@@ -358,7 +318,7 @@ export default function RentForm({
                                     {field.type === 'number' && (
                                         <input
                                             type="number"
-                                            placeholder={`${field.label}을(를) 입력해주세요`}
+                                            placeholder={`${field.label} / Please enter`}
                                             value={customData[field.id] || ''}
                                             onChange={(e) => updateCustomField(field.id, e.target.value)}
                                             className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 transition-all"
@@ -506,31 +466,14 @@ export default function RentForm({
                         <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
                             연락처 <span className="text-[#ff5252] text-[10px]">●</span>
                         </label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="tel"
-                                maxLength={3}
-                                value={phone1}
-                                onChange={(e) => setPhone1(e.target.value.replace(/\D/g, ''))}
-                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
-                            />
-                            <span className="text-gray-300 font-bold">-</span>
-                            <input
-                                type="tel"
-                                maxLength={4}
-                                value={phone2}
-                                onChange={(e) => setPhone2(e.target.value.replace(/\D/g, ''))}
-                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
-                            />
-                            <span className="text-gray-300 font-bold">-</span>
-                            <input
-                                type="tel"
-                                maxLength={4}
-                                value={phone3}
-                                onChange={(e) => setPhone3(e.target.value.replace(/\D/g, ''))}
-                                className="w-full text-center py-4 rounded-xl border-none focus:ring-2 focus:ring-[#FFEA00] shadow-sm text-lg outline-none font-medium text-gray-800"
-                            />
-                        </div>
+                        <p className="text-[13px] text-gray-500 -mt-2">Contact</p>
+                        <input
+                            type="tel"
+                            placeholder="연락처 / Contact number"
+                            value={phoneInput}
+                            onChange={(e) => setPhoneInput(e.target.value)}
+                            className="w-full py-4 px-5 rounded-[16px] bg-white border border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-[15px] outline-none font-medium text-gray-800 transition-all"
+                        />
                     </div>
 
                     {/* Privacy (Custom or Default) */}
@@ -548,7 +491,8 @@ export default function RentForm({
                                         {customData[field.id] && <span className="text-black text-sm font-bold">✓</span>}
                                     </div>
                                     <label className="text-[15px] font-medium text-gray-800 cursor-pointer select-none">
-                                        {field.options?.[1] || '개인정보 수집 및 초상권 이용에 동의하시겠습니까?'}
+                                        {field.options?.[1] || '개인정보 수집 및 초상권 이용에 동의하시겠습니까?'}<br />
+                                        <span className="text-[13px] text-gray-500 font-normal">Do you agree to the collection of personal information and use of portrait rights?</span>
                                     </label>
                                 </div>
                             </div>
@@ -558,6 +502,7 @@ export default function RentForm({
                             <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
                                 개인정보 수집 및 이용 동의 <span className="text-[#ff5252] text-[10px]">●</span>
                             </label>
+                            <p className="text-[13px] text-gray-500 -mt-2">Consent to Collection and Use of Personal Information</p>
                             <div className="bg-white p-5 rounded-lg h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed shadow-sm border border-gray-100/50">
                                 회사명(이하 '회사'라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립, 공개합니다.<br /><br />
                                 <strong>제1조 (개인정보의 처리목적)</strong><br />
@@ -568,7 +513,8 @@ export default function RentForm({
                                     {privacyAgreed && <span className="text-black text-sm font-bold">✓</span>}
                                 </div>
                                 <label className="text-[15px] font-medium text-gray-800 cursor-pointer select-none">
-                                    개인정보 수집 및 초상권 이용에 동의하시겠습니까?
+                                    개인정보 수집 및 초상권 이용에 동의하시겠습니까?<br />
+                                    <span className="text-[13px] text-gray-500 font-normal">Do you agree to the collection of personal information and use of portrait rights?</span>
                                 </label>
                             </div>
                         </div>
@@ -579,12 +525,14 @@ export default function RentForm({
                         <label className="flex items-center gap-1.5 text-[16px] font-bold text-gray-800">
                             위의 안전수칙사항을 확인하셨나요? <span className="text-[#ff5252] text-[10px]">●</span>
                         </label>
+                        <p className="text-[13px] text-gray-500 -mt-2">Have you reviewed the safety guidelines above?</p>
                         <div className="flex items-center gap-3 pl-1 cursor-pointer" onClick={() => setSafetyAgreed(!safetyAgreed)}>
                             <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${safetyAgreed ? 'border-[#FFEA00] bg-[#FFEA00]' : 'border-gray-400 bg-white'}`}>
                                 {safetyAgreed && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
                             </div>
                             <label className="text-[15px] text-gray-800 cursor-pointer select-none">
-                                네, 확인했습니다.
+                                네, 확인했습니다.<br />
+                                <span className="text-[13px] text-gray-500 font-normal">Yes, I have confirmed.</span>
                             </label>
                         </div>
                     </div>
@@ -596,65 +544,21 @@ export default function RentForm({
                                 우산 번호 입력 <span className="text-[#ff5252] text-[10px]">●</span>
                             </label>
                         </div>
+                        <p className="text-[13px] text-gray-500 -mt-2">Umbrella Number</p>
 
                         {/* Input Area */}
                         <div className="relative">
-                            {isManualInput ? (
-                                <div className="space-y-4">
-                                    <input
-                                        type="number"
-                                        placeholder="스태프에게 안내받은 번호를 입력해주세요."
-                                        value={umbrellaId}
-                                        onChange={(e) => setUmbrellaId(e.target.value)}
-                                        className="w-full text-center py-5 rounded-[20px] border-2 border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-xl md:text-2xl placeholder:text-[15px] placeholder:font-medium outline-none font-bold text-[#5400d3] transition-all bg-white"
-                                    />
-                                    {!umbrellaId && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsManualInput(false);
-                                                setTimeout(() => {
-                                                    startScanner();
-                                                }, 100);
-                                            }}
-                                            className="w-full py-4 rounded-xl bg-[#5400d3]/5 text-[#5400d3] font-bold text-sm flex items-center justify-center gap-2 border border-[#5400d3]/10 hover:bg-[#5400d3]/10 transition-colors"
-                                        >
-                                            <Camera className="w-4 h-4" />
-                                            QR 코드로 스캔하기
-                                        </button>
-                                    )}
-                                </div>
-                            ) : umbrellaId ? (
-                                <div className="bg-white p-5 rounded-[20px] shadow-sm border-2 border-[#5400d3] flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs text-gray-500 mb-1">인식된 우산 번호</p>
-                                        <p className="font-mono font-bold text-2xl text-[#5400d3]">{umbrellaId}</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setUmbrellaId('');
-                                            setIsManualInput(true);
-                                        }}
-                                        className="bg-gray-100 text-gray-400 hover:text-gray-600 p-2 rounded-full transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <video id="qr-video" className="w-full rounded-[20px] overflow-hidden border-2 border-[#5400d3]/20 shadow-inner" />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            stopScanner();
-                                            setIsManualInput(true);
-                                        }}
-                                        className="w-full py-4 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-all"
-                                    >
-                                        <X className="w-4 h-4" />
-                                        스캔 취소 후 직접 입력하기
-                                    </button>
+                            <input
+                                type="number"
+                                placeholder=" "
+                                value={umbrellaId}
+                                onChange={(e) => setUmbrellaId(e.target.value)}
+                                className="w-full text-center py-5 rounded-[20px] border-2 border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-xl md:text-2xl outline-none font-bold text-[#5400d3] transition-all bg-white peer"
+                            />
+                            {!umbrellaId && (
+                                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+                                    <span className="text-[14px] text-gray-400 font-medium">스태프에게 안내받은 번호를 입력해주세요.</span>
+                                    <span className="text-[13px] text-gray-500">Enter the number provided by staff.</span>
                                 </div>
                             )}
                         </div>
@@ -665,9 +569,9 @@ export default function RentForm({
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="bg-[#FFEA00] text-gray-900 font-bold text-lg py-4 px-12 rounded-xl shadow-md w-48 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
+                            className="bg-[#FFEA00] text-gray-900 font-bold text-lg py-4 px-8 rounded-xl shadow-md w-64 whitespace-nowrap transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
                         >
-                            {isSubmitting ? '처리중...' : '완료'}
+                            {isSubmitting ? '처리중... / Processing...' : '완료 / Submit'}
                         </button>
                     </div>
                 </form>

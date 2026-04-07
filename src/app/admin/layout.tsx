@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, ArrowLeftRight, Store, LogOut, Umbrella, QrCode, Barcode } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Store, LogOut, QrCode, Barcode, BarChart2 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
@@ -86,6 +86,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     >
                         <Barcode className="w-5 h-5" />
                         바코드 생성기
+                    </Link>
+                    <Link
+                        href="/admin/analytics"
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${pathname === '/admin/analytics' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                    >
+                        <BarChart2 className="w-5 h-5" />
+                        분석
                     </Link>
                 </nav>
                 <div className="p-4 border-t border-slate-800">
