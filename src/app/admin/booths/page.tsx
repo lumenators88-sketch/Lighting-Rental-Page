@@ -215,15 +215,25 @@ export default function BoothsPage() {
     };
 
     const handleComplete = async (id: string, name: string) => {
-        if (!confirm(`'${name}' 행사를 완료 처리하시겠습니까?\n\n우산 배정이 해제되고 행사가 비활성화됩니다.`)) return;
+        // 1. 분석 데이터 저장 여부 확인
+        const shouldArchive = confirm(`'${name}' 행사의 분석 데이터를 저장하시겠습니까?\n\n저장하면 행사 삭제 후에도 분석 탭에서 데이터를 확인할 수 있습니다.`);
 
+        if (shouldArchive) {
+            try {
+                const archiveRes = await fetch(`/api/booths/${id}/archive`, { method: 'POST' });
+                const archiveData = await archiveRes.json();
+                if (!archiveRes.ok) throw new Error('데이터 저장 실패');
+                toast.success(`분석 데이터 ${archiveData.archived}건이 저장되었습니다.`);
+            } catch (err: any) {
+                toast.error(err.message || '데이터 저장 중 오류가 발생했습니다.');
+                return;
+            }
+        }
+
+        // 2. 행사 완료 처리
         try {
-            const res = await fetch(`/api/booths/${id}/complete`, {
-                method: 'POST',
-            });
-
+            const res = await fetch(`/api/booths/${id}/complete`, { method: 'POST' });
             if (!res.ok) throw new Error('행사 완료 처리 실패');
-
             toast.success('행사가 완료 처리되었습니다.');
             fetchBooths();
         } catch (err: any) {
