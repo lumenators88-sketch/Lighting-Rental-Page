@@ -163,7 +163,7 @@ export default function RentForm({
             }
 
             // 성공 시 지정된 외부 URL로 즉시 이동 (해당 페이지에 완료 안내문 포함됨)
-            window.location.href = 'https://url.kr/ywvfkc';
+            window.location.href = 'https://rp88.imweb.me/011';
         } catch (error) {
             toast.error('네트워크 오류가 발생했습니다.');
             setIsSubmitting(false);

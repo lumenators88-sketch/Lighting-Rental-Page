@@ -93,13 +93,7 @@ export default function QuickReturnPage() {
                             <p className="text-xs text-gray-400 font-medium mb-1">우산 번호</p>
                             <p className="text-5xl font-black text-green-500 tracking-tight">#{umbrellaId}</p>
                         </div>
-                        <p className="text-center text-gray-500 text-sm mb-6">반납이 완료되었습니다.<br />감사합니다! 🙏</p>
-                        <button
-                            className="w-full h-14 rounded-2xl bg-green-500 text-white text-lg font-bold shadow-lg shadow-green-200 active:scale-95 transition-all"
-                            onClick={() => router.push('/')}
-                        >
-                            처음으로
-                        </button>
+                        <p className="text-center text-gray-500 text-sm">반납이 완료되었습니다.<br />감사합니다! 🙏</p>
                     </div>
                 </div>
             </div>

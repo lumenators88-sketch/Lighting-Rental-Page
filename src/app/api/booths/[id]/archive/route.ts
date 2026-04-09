@@ -30,11 +30,10 @@ export async function POST(
             return NextResponse.json({ success: true, archived: 0 });
         }
 
-        // RentalArchive에 복사
+        // RentalBackup에 복사
         const archiveRows = rentals.map(r => ({
             id: r.id,
             umbrellaId: r.umbrellaId,
-            phone: r.phone,
             boothId: r.boothId,
             boothName: booth.name,
             status: r.status,
@@ -44,7 +43,7 @@ export async function POST(
         }));
 
         const { error: archiveError } = await supabase
-            .from('RentalArchive')
+            .from('RentalBackup')
             .upsert(archiveRows, { onConflict: 'id' });
 
         if (archiveError) throw archiveError;

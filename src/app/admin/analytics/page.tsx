@@ -11,12 +11,12 @@ import {
 type Rental = {
     id: string;
     umbrellaId: string;
-    phone: string;
     rentedAt: string;
     returnedAt: string | null;
     status: 'RENTED' | 'RETURNED';
     boothId: string;
-    booth: { name: string };
+    boothName: string;
+    customData?: Record<string, string>;
 };
 
 type Booth = {
@@ -35,13 +35,27 @@ export default function AnalyticsPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [rentalsRes, boothsRes] = await Promise.all([
+            const [rentalsRes, boothsRes, backupRes] = await Promise.all([
                 fetch('/api/rentals'),
                 fetch('/api/booths'),
+                fetch('/api/rental-backup'),
             ]);
             const rentalsData = await rentalsRes.json();
             const boothsData = await boothsRes.json();
-            setRentals(rentalsData.rentals || []);
+            const backupData = await backupRes.json();
+
+            // Rental: booth.name → boothName 으로 정규화
+            const liveRentals: Rental[] = (rentalsData.rentals || []).map((r: any) => ({
+                ...r,
+                boothName: r.booth?.name || '알 수 없음',
+            }));
+
+            // RentalBackup은 이미 boothName 보유, 중복 제거 (id 기준)
+            const backupRentals: Rental[] = backupData.rentals || [];
+            const liveIds = new Set(liveRentals.map((r: Rental) => r.id));
+            const uniqueBackup = backupRentals.filter(r => !liveIds.has(r.id));
+
+            setRentals([...liveRentals, ...uniqueBackup]);
             setBooths(boothsData.booths || []);
         } catch (e) {
             console.error(e);
@@ -151,6 +165,21 @@ export default function AnalyticsPage() {
                         {booth.name}
                     </Button>
                 ))}
+                {/* 삭제된 행사 (백업 데이터에만 존재) */}
+                {Array.from(new Set(rentals.filter(r => !booths.find(b => b.id === r.boothId)).map(r => r.boothId))).map(boothId => {
+                    const name = rentals.find(r => r.boothId === boothId)?.boothName || '삭제된 행사';
+                    return (
+                        <Button
+                            key={boothId}
+                            size="sm"
+                            variant={selectedBooth === boothId ? 'default' : 'outline'}
+                            onClick={() => setSelectedBooth(boothId ?? '')}
+                            className="opacity-60"
+                        >
+                            {name} (종료)
+                        </Button>
+                    );
+                })}
             </div>
 
             {/* 날짜 필터 */}
@@ -267,7 +296,7 @@ export default function AnalyticsPage() {
                                                 <span className="font-mono font-bold text-[#5400d3]">#{r.umbrellaId}</span>
                                                 <span className="text-sm text-gray-500">{r.phone}</span>
                                                 {selectedBooth === 'ALL' && (
-                                                    <span className="text-xs text-gray-400">{r.booth?.name}</span>
+                                                    <span className="text-xs text-gray-400">{r.boothName}</span>
                                                 )}
                                             </div>
                                             <span className={`text-sm font-medium ${elapsed > 60 ? 'text-red-500' : 'text-gray-500'}`}>
