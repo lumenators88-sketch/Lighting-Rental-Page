@@ -294,7 +294,6 @@ export default function AnalyticsPage() {
                                         <div key={r.id} className="flex items-center justify-between py-2 border-b last:border-0">
                                             <div className="flex items-center gap-3">
                                                 <span className="font-mono font-bold text-[#5400d3]">#{r.umbrellaId}</span>
-                                                <span className="text-sm text-gray-500">{r.phone}</span>
                                                 {selectedBooth === 'ALL' && (
                                                     <span className="text-xs text-gray-400">{r.boothName}</span>
                                                 )}
