@@ -199,21 +199,30 @@ export default function AdminDashboard() {
             <div className="flex gap-2">
                 <Button
                     variant={filter === 'ALL' ? 'default' : 'outline'}
-                    onClick={() => setFilter('ALL')}
+                    onClick={() => {
+                        setFilter('ALL');
+                        setShowStats(false);
+                    }}
                     size="sm"
                 >
                     전체
                 </Button>
                 <Button
                     variant={filter === 'RENTED' ? 'default' : 'outline'}
-                    onClick={() => setFilter('RENTED')}
+                    onClick={() => {
+                        setFilter('RENTED');
+                        setShowStats(false);
+                    }}
                     size="sm"
                 >
                     대여 중
                 </Button>
                 <Button
                     variant={filter === 'RETURNED' ? 'default' : 'outline'}
-                    onClick={() => setFilter('RETURNED')}
+                    onClick={() => {
+                        setFilter('RETURNED');
+                        setShowStats(false);
+                    }}
                     size="sm"
                 >
                     반납 완료
