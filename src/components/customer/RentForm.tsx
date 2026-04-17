@@ -552,7 +552,10 @@ export default function RentForm({
                                 type="number"
                                 placeholder=" "
                                 value={umbrellaId}
-                                onChange={(e) => setUmbrellaId(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                    setUmbrellaId(val ? String(parseInt(val, 10)) : '');
+                                }}
                                 className="w-full text-center py-5 rounded-[20px] border-2 border-gray-100 focus:border-[#5400d3] focus:ring-4 focus:ring-[#5400d3]/10 shadow-sm text-xl md:text-2xl outline-none font-bold text-[#5400d3] transition-all bg-white peer"
                             />
                             {!umbrellaId && (
