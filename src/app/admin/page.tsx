@@ -244,12 +244,18 @@ export default function AdminDashboard() {
                 const rented = base.filter(r => r.status === 'RENTED').length;
                 const returned = base.filter(r => r.status === 'RETURNED').length;
                 const rate = total > 0 ? Math.round((returned / total) * 100) : 0;
+                const returnedWithTime = base.filter(r => r.status === 'RETURNED' && r.returnedAt);
+                const avgMinutes = returnedWithTime.length > 0
+                    ? Math.round(returnedWithTime.reduce((sum, r) => sum + (new Date(r.returnedAt!).getTime() - new Date(r.rentedAt).getTime()), 0) / returnedWithTime.length / 1000 / 60)
+                    : null;
+                const avgLabel = avgMinutes === null ? '-' : avgMinutes >= 60 ? `${Math.floor(avgMinutes / 60)}시간 ${avgMinutes % 60}분` : `${avgMinutes}분`;
                 return (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                         <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">총 대여</p><p className="text-2xl font-extrabold text-blue-600">{total}<span className="text-sm font-medium text-gray-500 ml-1">건</span></p></CardContent></Card>
                         <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">현재 대여 중</p><p className="text-2xl font-extrabold text-red-500">{rented}<span className="text-sm font-medium text-gray-500 ml-1">건</span></p></CardContent></Card>
                         <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">반납 완료</p><p className="text-2xl font-extrabold text-green-600">{returned}<span className="text-sm font-medium text-gray-500 ml-1">건</span></p></CardContent></Card>
                         <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">반납률</p><p className="text-2xl font-extrabold text-purple-600">{rate}<span className="text-sm font-medium text-gray-500 ml-1">%</span></p></CardContent></Card>
+                        <Card><CardContent className="p-4"><p className="text-xs text-gray-500 mb-1">평균 대여 시간</p><p className="text-2xl font-extrabold text-orange-500">{avgLabel}</p></CardContent></Card>
                     </div>
                 );
             })() : (
