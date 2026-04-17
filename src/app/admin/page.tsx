@@ -274,6 +274,7 @@ export default function AdminDashboard() {
                                 <TableHead>대여 행사</TableHead>
                                 <TableHead>대여 시각</TableHead>
                                 <TableHead>반납 시각</TableHead>
+                                <TableHead>경과 시간</TableHead>
                                 <TableHead className="w-[100px] text-center">관리</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -334,6 +335,18 @@ export default function AdminDashboard() {
                                         <TableCell>{new Date(r.rentedAt).toLocaleString('ko-KR')}</TableCell>
                                         <TableCell>
                                             {r.returnedAt ? new Date(r.returnedAt).toLocaleString('ko-KR') : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                const end = r.returnedAt ? new Date(r.returnedAt) : new Date();
+                                                const mins = Math.round((end.getTime() - new Date(r.rentedAt).getTime()) / 1000 / 60);
+                                                const label = mins >= 60 ? `${Math.floor(mins / 60)}시간 ${mins % 60}분` : `${mins}분`;
+                                                return (
+                                                    <span className={`text-sm font-medium ${r.status === 'RENTED' && mins > 30 ? 'text-red-500' : 'text-gray-500'}`}>
+                                                        {label}
+                                                    </span>
+                                                );
+                                            })()}
                                         </TableCell>
                                         <TableCell className="text-center">
                                             {isEditing ? (
