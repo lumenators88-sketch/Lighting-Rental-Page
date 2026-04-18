@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(
-    request: Request,
+    _request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
@@ -30,17 +30,28 @@ export async function POST(
             return NextResponse.json({ success: true, archived: 0 });
         }
 
-        // RentalBackup에 복사
-        const archiveRows = rentals.map(r => ({
-            id: r.id,
-            umbrellaId: r.umbrellaId,
-            boothId: r.boothId,
-            boothName: booth.name,
-            status: r.status,
-            rentedAt: r.rentedAt,
-            returnedAt: r.returnedAt ?? null,
-            customData: r.customData ?? {},
-        }));
+        // 로스 상태인 우산 목록 조회
+        const { data: lostUmbrellas } = await supabase
+            .from('UmbrellaLoss')
+            .select('umbrellaId')
+            .eq('status', 'LOST');
+
+        const lostIds = new Set((lostUmbrellas ?? []).map(l => l.umbrellaId));
+
+        // 로스 우산 제외하고 RentalBackup에 복사, RENTED는 RETURNED로 강제 처리
+        const now = new Date().toISOString();
+        const archiveRows = rentals
+            .filter(r => !lostIds.has(r.umbrellaId))
+            .map(r => ({
+                id: r.id,
+                umbrellaId: r.umbrellaId,
+                boothId: r.boothId,
+                boothName: booth.name,
+                status: 'RETURNED',
+                rentedAt: r.rentedAt,
+                returnedAt: r.returnedAt ?? now,
+                customData: r.customData ?? {},
+            }));
 
         const { error: archiveError } = await supabase
             .from('RentalBackup')

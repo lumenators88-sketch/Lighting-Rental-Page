@@ -47,9 +47,20 @@ type Booth = {
     umbrellaEndNumber: number | null;
 };
 
+type UmbrellaLoss = {
+    id: string;
+    umbrellaId: string;
+    boothId: string | null;
+    boothName: string | null;
+    status: 'LOST' | 'RECOVERED';
+    lostAt: string;
+    recoveredAt: string | null;
+};
+
 export default function AdminDashboard() {
     const [rentals, setRentals] = useState<Rental[]>([]);
     const [booths, setBooths] = useState<Booth[]>([]);
+    const [losses, setLosses] = useState<UmbrellaLoss[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'ALL' | 'RENTED' | 'RETURNED'>('ALL');
     const [boothFilter, setBoothFilter] = useState<'ALL' | string>('ALL');
@@ -58,23 +69,60 @@ export default function AdminDashboard() {
     const [editForm, setEditForm] = useState<{ umbrellaId: string, phone: string, status: 'RENTED' | 'RETURNED' } | null>(null);
 
     const fetchData = async () => {
-        if (editingId) return; // don't refresh while editing
+        if (editingId) return;
         setLoading(true);
         try {
-            const [rentalsRes, boothsRes] = await Promise.all([
+            const [rentalsRes, boothsRes, lossesRes] = await Promise.all([
                 fetch('/api/rentals'),
-                fetch('/api/booths')
+                fetch('/api/booths'),
+                fetch('/api/umbrellas/losses'),
             ]);
 
             const rentalsData = await rentalsRes.json();
             const boothsData = await boothsRes.json();
+            const lossesData = await lossesRes.json();
 
             setRentals(rentalsData.rentals || []);
             setBooths(boothsData.booths || []);
+            setLosses(lossesData.losses || []);
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleLoss = async (rental: Rental) => {
+        if (!confirm(`#${rental.umbrellaId} 우산을 로스 처리하시겠습니까?`)) return;
+        try {
+            const res = await fetch('/api/umbrellas/loss', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ umbrellaId: rental.umbrellaId, boothId: rental.boothId, boothName: rental.booth?.name }),
+            });
+            if (res.ok) {
+                toast.success(`#${rental.umbrellaId} 로스 처리되었습니다.`);
+                fetchData();
+            } else {
+                toast.error('로스 처리 실패');
+            }
+        } catch {
+            toast.error('오류가 발생했습니다.');
+        }
+    };
+
+    const handleRecover = async (loss: UmbrellaLoss) => {
+        if (!confirm(`#${loss.umbrellaId} 우산을 복구 처리하시겠습니까?`)) return;
+        try {
+            const res = await fetch(`/api/umbrellas/loss/${loss.id}/recover`, { method: 'PATCH' });
+            if (res.ok) {
+                toast.success(`#${loss.umbrellaId} 복구 처리되었습니다.`);
+                fetchData();
+            } else {
+                toast.error('복구 처리 실패');
+            }
+        } catch {
+            toast.error('오류가 발생했습니다.');
         }
     };
 
@@ -109,6 +157,24 @@ export default function AdminDashboard() {
                 toast.error(data.error || '수정 실패');
             }
         } catch (error) {
+            toast.error('오류가 발생했습니다.');
+        }
+    };
+
+    const handleDailyComplete = async () => {
+        if (!confirm('오늘 행사를 완료하시겠습니까?\n대여 기록이 백업되고 현황이 초기화됩니다.\n(부스 설정은 유지되어 내일 바로 시작 가능합니다)')) return;
+        try {
+            const targetBooths = booths.filter(b => b.isActive);
+            if (targetBooths.length === 0) {
+                toast.error('활성화된 부스가 없습니다.');
+                return;
+            }
+            await Promise.all(
+                targetBooths.map(b => fetch(`/api/booths/${b.id}/daily-complete`, { method: 'POST' }))
+            );
+            toast.success('오늘 행사가 완료되었습니다. 내일 바로 시작하실 수 있습니다.');
+            fetchData();
+        } catch {
             toast.error('오류가 발생했습니다.');
         }
     };
@@ -148,10 +214,15 @@ export default function AdminDashboard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">대여 현황 대시보드</h2>
-                <Button onClick={fetchData} variant="outline" size="sm" disabled={loading}>
-                    <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                    새로고침
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={handleDailyComplete} variant="outline" size="sm" className="text-orange-600 border-orange-300 hover:bg-orange-50">
+                        오늘 행사 완료
+                    </Button>
+                    <Button onClick={fetchData} variant="outline" size="sm" disabled={loading}>
+                        <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        새로고침
+                    </Button>
+                </div>
             </div>
 
             {/* Booth Summaries */}
@@ -359,9 +430,16 @@ export default function AdminDashboard() {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <button onClick={() => handleEdit(r)} className="px-2 py-1 bg-gray-50 text-gray-600 rounded hover:bg-blue-50 hover:text-blue-600 font-bold text-xs transition-colors">
-                                                    수정
-                                                </button>
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button onClick={() => handleEdit(r)} className="px-2 py-1 bg-gray-50 text-gray-600 rounded hover:bg-blue-50 hover:text-blue-600 font-bold text-xs transition-colors">
+                                                        수정
+                                                    </button>
+                                                    {r.status === 'RENTED' && (
+                                                        <button onClick={() => handleLoss(r)} className="px-2 py-1 bg-orange-50 text-orange-600 rounded hover:bg-orange-100 font-bold text-xs transition-colors">
+                                                            로스
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </TableCell>
                                     </TableRow>
@@ -379,6 +457,51 @@ export default function AdminDashboard() {
                 </CardContent>
             </Card>
             )}
+
+            {/* 로스 현황 */}
+            {(() => {
+                const activeLosses = losses.filter(l => l.status === 'LOST');
+                return (
+                    <div>
+                        <div className="flex items-center gap-3 mb-3">
+                            <h3 className="text-lg font-bold">로스 현황</h3>
+                            <span className="text-sm font-semibold text-orange-500">{activeLosses.length}개</span>
+                        </div>
+                        {activeLosses.length === 0 ? (
+                            <p className="text-sm text-gray-400">로스된 우산이 없습니다.</p>
+                        ) : (
+                            <Card>
+                                <CardContent className="p-0">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>우산 번호</TableHead>
+                                                <TableHead>행사</TableHead>
+                                                <TableHead>로스 시각</TableHead>
+                                                <TableHead className="text-center">복구</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {activeLosses.map(l => (
+                                                <TableRow key={l.id}>
+                                                    <TableCell className="font-mono font-bold text-orange-500">#{l.umbrellaId}</TableCell>
+                                                    <TableCell>{l.boothName || '-'}</TableCell>
+                                                    <TableCell>{new Date(l.lostAt).toLocaleString('ko-KR')}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <button onClick={() => handleRecover(l)} className="px-2 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 font-bold text-xs transition-colors">
+                                                            복구
+                                                        </button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                );
+            })()}
         </div>
     );
 }
